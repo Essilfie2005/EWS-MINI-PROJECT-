@@ -82,7 +82,7 @@ async def predict_student(
             for sv in shap_result["shap_values"]
         ]
     except Exception as e:
-        logger.warning("SHAP computation failed: %s", e)
+        logger.exception("SHAP computation failed: %s", e)
         # Expose the error to the frontend for debugging
         raise HTTPException(status_code=500, detail=f"SHAP computation failed: {str(e)}")
 
