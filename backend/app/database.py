@@ -16,16 +16,13 @@ from app.config import get_settings
 
 settings = get_settings()
 
-engine_kwargs = {
-    "echo": settings.DEBUG,
-    "future": True,
-    "pool_pre_ping": True,
-}
-
-if "postgresql" in settings.DATABASE_URL:
-    engine_kwargs["connect_args"] = {"statement_cache_size": 0}
-
-engine = create_async_engine(settings.DATABASE_URL, **engine_kwargs)
+engine = create_async_engine(
+    settings.DATABASE_URL,
+    echo=settings.DEBUG,
+    future=True,
+    pool_pre_ping=True,
+    connect_args={"statement_cache_size": 0}
+)
 
 async_session_factory = async_sessionmaker(
     bind=engine,
