@@ -56,6 +56,18 @@ def _load_model_and_scaler():
     return model, scaler
 
 
+def safe_float(val: Any) -> float:
+    try:
+        if isinstance(val, (list, tuple, np.ndarray)):
+            return float(val[0])
+        return float(val)
+    except Exception:
+        s = str(val).replace('[', '').replace(']', '').replace("'", "").replace('"', '').strip()
+        try:
+            return float(s)
+        except Exception:
+            return 0.0
+
 def compute_shap_values(features: dict[str, float]) -> dict[str, Any]:
     """
     Compute SHAP values for a single student.
@@ -75,19 +87,23 @@ def compute_shap_values(features: dict[str, float]) -> dict[str, Any]:
 
     # shap_vals shape: (1, n_features) for binary
     sv = shap_vals[0] if isinstance(shap_vals, list) else shap_vals[0]
-    base = float(explainer.expected_value if isinstance(explainer.expected_value, float)
-                 else explainer.expected_value[0] if hasattr(explainer.expected_value, '__len__')
-                 else explainer.expected_value)
+    
+    # Safely extract expected_value which can be a scalar, list, or array
+    ev = explainer.expected_value
+    if isinstance(ev, (list, tuple, np.ndarray)):
+        base = safe_float(ev[0])
+    else:
+        base = safe_float(ev)
 
-    prob = float(model.predict_proba(x_scaled)[0, 1])
+    prob = safe_float(model.predict_proba(x_scaled)[0, 1])
 
     result = {
         "shap_values": [
             {
                 "feature": FEATURE_LABELS.get(col, col),
                 "feature_key": col,
-                "value": float(features.get(col, 0.0)),
-                "contribution": float(sv[i]),
+                "value": safe_float(features.get(col, 0.0)),
+                "contribution": safe_float(sv[i]),
             }
             for i, col in enumerate(FEATURE_COLS)
         ],
