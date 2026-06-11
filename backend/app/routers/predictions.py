@@ -58,7 +58,12 @@ async def predict_student(
     else:
         raise HTTPException(status_code=400, detail="Provide student_id or anon_id")
 
-    result = await db.execute(query)
+    try:
+        result = await db.execute(query)
+    except Exception as e:
+        logger.error("Database query failed: %s", e)
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
     student = result.scalar_one_or_none()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
@@ -78,8 +83,8 @@ async def predict_student(
         ]
     except Exception as e:
         logger.warning("SHAP computation failed: %s", e)
-        shap_values_list = None
-        top_factors = []
+        # Expose the error to the frontend for debugging
+        raise HTTPException(status_code=500, detail=f"SHAP computation failed: {str(e)}")
 
     # Generate waterfall plot
     waterfall_url = None
