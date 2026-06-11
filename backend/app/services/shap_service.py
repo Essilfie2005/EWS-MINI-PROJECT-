@@ -79,7 +79,7 @@ def compute_shap_values(features: dict[str, float]) -> dict[str, Any]:
     """
     model, scaler = _load_model_and_scaler()
 
-    x = np.array([[features.get(col, 0.0) for col in FEATURE_COLS]], dtype=np.float32)
+    x = np.array([[safe_float(features.get(col, 0.0)) for col in FEATURE_COLS]], dtype=np.float32)
     x_scaled = scaler.transform(x)
 
     explainer = shap.TreeExplainer(model)
@@ -148,7 +148,7 @@ def generate_waterfall_plot(
     """
     model, scaler = _load_model_and_scaler()
 
-    x = np.array([[features.get(col, 0.0) for col in FEATURE_COLS]], dtype=np.float32)
+    x = np.array([[safe_float(features.get(col, 0.0)) for col in FEATURE_COLS]], dtype=np.float32)
     x_scaled = scaler.transform(x)
 
     explainer = shap.TreeExplainer(model)
