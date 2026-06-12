@@ -181,21 +181,21 @@ export default function StudentsPage() {
                 <tbody>
                   {paginated.map((s) => (
                     <tr key={s.id} onClick={() => navigate(`/students/${s.id}`)}>
-                      <td>{s.original_id || s.id}</td>
-                      <td>{s.attendance_rate != null ? `${Number(s.attendance_rate).toFixed(1)}%` : '—'}</td>
-                      <td>{s.quiz_average != null ? `${Number(s.quiz_average).toFixed(1)}%` : '—'}</td>
-                      <td>{s.assignment_submission_rate != null ? `${Number(s.assignment_submission_rate).toFixed(1)}%` : '—'}</td>
-                      <td>
+                      <td data-label="Student ID">{s.original_id || s.id}</td>
+                      <td data-label="Attendance %">{s.attendance_rate != null ? `${Number(s.attendance_rate).toFixed(1)}%` : '—'}</td>
+                      <td data-label="Quiz Avg %">{s.quiz_average != null ? `${Number(s.quiz_average).toFixed(1)}%` : '—'}</td>
+                      <td data-label="Assignment %">{s.assignment_submission_rate != null ? `${Number(s.assignment_submission_rate).toFixed(1)}%` : '—'}</td>
+                      <td data-label="Risk Score">
                         <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
                           {s.risk_score != null ? Number(s.risk_score).toFixed(3) : '—'}
                         </span>
                       </td>
-                      <td>
+                      <td data-label="Risk Band">
                         <span className={`risk-badge ${(s.risk_band || '').toLowerCase()}`}>
                           {s.risk_band || '—'}
                         </span>
                       </td>
-                      <td>
+                      <td data-label="Actions">
                         <button
                           className="btn btn-secondary btn-sm btn-icon"
                           title="View Details"
