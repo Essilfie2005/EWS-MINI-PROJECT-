@@ -153,18 +153,13 @@ async def predict_batch(
         features = {col: getattr(student, col) for col in FEATURE_COLS}
         pred = ml_pipeline.predict_single(features)
 
-        try:
-            top_factors = shap_service.get_top_risk_factors(features, top_n=3)
-        except Exception:
-            top_factors = []
-
         prediction = Prediction(
             student_id=student.id,
             anon_id=student.anon_id,
             risk_score=pred["risk_score"],
             risk_band=pred["risk_band"],
             model_version=pred["model_version"],
-            top_factors=json.dumps(top_factors) if top_factors else None,
+            top_factors=None,
         )
         db.add(prediction)
 
@@ -179,7 +174,7 @@ async def predict_batch(
             risk_score=pred["risk_score"],
             risk_band=pred["risk_band"],
             model_version=pred["model_version"],
-            top_factors=top_factors,
+            top_factors=[],
         ))
 
     await db.flush()
