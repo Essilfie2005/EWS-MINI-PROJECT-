@@ -57,9 +57,6 @@ export default function DashboardPage() {
         onRetry={overview.refetch}
       />
 
-      <div style={{ marginTop: 24 }}>
-        <RecentAlerts data={alerts.data} loading={alerts.loading} />
-      </div>
     </div>
   );
 }

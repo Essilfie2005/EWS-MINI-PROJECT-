@@ -337,12 +337,6 @@ export default function StudentDetailPage() {
           <ArrowLeft size={16} /> Back to Students
         </button>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn btn-primary btn-sm" onClick={handleSendSMS} disabled={sendingSMS || sendingWA}>
-            <Send size={14} /> {sendingSMS ? 'Sending...' : 'Send SMS'}
-          </button>
-          <button className="btn btn-primary btn-sm" onClick={handleSendWhatsApp} disabled={sendingSMS || sendingWA} style={{ backgroundColor: '#25D366', color: '#fff' }}>
-            <MessageSquare size={14} /> {sendingWA ? 'Sending...' : 'Send WhatsApp'}
-          </button>
           <button className="btn btn-secondary btn-sm" onClick={() => setShowModal(true)}>
             <ClipboardPlus size={14} /> Log Intervention
           </button>

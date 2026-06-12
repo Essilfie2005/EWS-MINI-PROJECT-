@@ -39,11 +39,6 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }) {
       <div className="header-right">
 
 
-        <button className="header-icon-btn" onClick={() => { window.location.href = '/alerts'; }}>
-          <Bell size={18} />
-          <span className="badge" />
-        </button>
-
         <div className="header-avatar" title="Administrator">
           AD
         </div>
