@@ -4,7 +4,7 @@
 ![Python](https://img.shields.io/badge/python-3.10+-blue.svg)
 ![React](https://img.shields.io/badge/react-18.x-61dafb.svg)
 
-An AI-powered Early Warning System designed for university foundation programs (specifically tailored for West African institutions). The system uses Machine Learning to predict student dropout risk in real-time, provides Explainable AI (XAI) to educators, and automates early interventions via SMS.
+An AI-powered Early Warning System designed for university foundation programs (specifically tailored for West African institutions). The system uses Machine Learning to predict student dropout risk in real-time, provides Explainable AI (XAI) to educators, and helps counselors track interventions.
 
 This project was built as a Mini Project by **Group 3**.
 
@@ -14,7 +14,6 @@ This project was built as a Mini Project by **Group 3**.
 
 * **🤖 Predictive Machine Learning:** Utilises an **XGBoost** classifier with automated Hyperparameter Optimisation (via Optuna) to predict dropout risk.
 * **🧠 Explainable AI (XAI):** Integrates **SHAP** (SHapley Additive exPlanations) to provide waterfall plots and feature-importance metrics, explaining *why* a specific student is at risk.
-* **📱 Automated Interventions:** Connects to the **Africa's Talking API** to automatically send SMS alerts to at-risk students or their academic advisors.
 * **☁️ Cloud-Native Architecture:** 100% cloud-ready. Serializes the trained ML models directly into a **Supabase PostgreSQL** database, ensuring data and models survive ephemeral server spins on free hosting tiers like Render.
 * **🎨 Premium UI/UX:** A stunning, modern dashboard built with React and Vite, featuring glassmorphism, responsive mobile layouts, and a guided onboarding tutorial.
 
