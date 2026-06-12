@@ -2,10 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
-  Send,
   ClipboardPlus,
   AlertTriangle,
-  MessageSquare,
 } from 'lucide-react';
 import {
   BarChart,
@@ -18,7 +16,7 @@ import {
   Cell,
   ReferenceLine,
 } from 'recharts';
-import { fetchStudentDetail, sendSMSAlert, sendWhatsAppAlert, createIntervention, updateIntervention, triggerSinglePrediction, fetchPredictionHistory, fetchStudentInterventions } from '../services/api';
+import { fetchStudentDetail, createIntervention, updateIntervention, triggerSinglePrediction, fetchPredictionHistory, fetchStudentInterventions } from '../services/api';
 import { SkeletonCard, SkeletonChart } from '../components/shared/Skeleton';
 import ErrorState from '../components/shared/ErrorState';
 import { useToast } from '../context/ToastContext';
@@ -179,8 +177,7 @@ export default function StudentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [sendingSMS, setSendingSMS] = useState(false);
-  const [sendingWA, setSendingWA] = useState(false);
+
   const [generatingShap, setGeneratingShap] = useState(false);
 
   const handleGenerateShap = async () => {
@@ -228,43 +225,7 @@ export default function StudentDetailPage() {
     loadStudent();
   }, [loadStudent]);
 
-  const handleSendSMS = async () => {
-    let phoneNumber = student.phone_number;
-    if (!phoneNumber) {
-      phoneNumber = window.prompt("Enter phone number to send SMS to (e.g. +254711223344):");
-      if (!phoneNumber) return;
-    }
 
-    setSendingSMS(true);
-    try {
-      await sendSMSAlert({ student_id: parseInt(id, 10), phone_number: phoneNumber });
-      addToast(`SMS alert sent to ${phoneNumber}`, 'success');
-      await loadStudent(); // refresh to show the new SMS intervention in the timeline
-    } catch (err) {
-      addToast(err.response?.data?.detail || 'Failed to send SMS', 'error');
-    } finally {
-      setSendingSMS(false);
-    }
-  };
-
-  const handleSendWhatsApp = async () => {
-    let phoneNumber = student.phone_number;
-    if (!phoneNumber) {
-      phoneNumber = window.prompt("Enter phone number to send WhatsApp to (e.g. +254711223344):");
-      if (!phoneNumber) return;
-    }
-
-    setSendingWA(true);
-    try {
-      await sendWhatsAppAlert({ student_id: parseInt(id, 10), phone_number: phoneNumber });
-      addToast(`WhatsApp alert sent to ${phoneNumber}`, 'success');
-      await loadStudent(); 
-    } catch (err) {
-      addToast(err.response?.data?.detail || 'Failed to send WhatsApp', 'error');
-    } finally {
-      setSendingWA(false);
-    }
-  };
 
   if (loading) {
     return (

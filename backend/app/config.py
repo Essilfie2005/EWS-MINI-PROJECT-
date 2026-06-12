@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     # ── Application ───────────────────────────────────────────────────────
     APP_NAME: str = "Dropout Early-Warning System"
     APP_VERSION: str = "1.0.0"
-    DEBUG: bool = True
+    DEBUG: bool = False
 
     # ── Database ──────────────────────────────────────────────────────────
     DATABASE_URL: str = f"sqlite+aiosqlite:///{BASE_DIR / 'dropout.db'}"
@@ -74,23 +74,19 @@ class Settings(BaseSettings):
     CTGAN_DISCRIMINATOR_DIM: tuple[int, int] = (256, 256)
     CTGAN_SYNTHETIC_N: int = 500
 
-    # ── Africa's Talking SMS ──────────────────────────────────────────────
-    AT_USERNAME: str = "sandbox"
-    AT_API_KEY: str = ""
-    AT_SENDER_ID: str = ""
-    AT_SANDBOX: bool = True
 
-    # ── Twilio WhatsApp ───────────────────────────────────────────────────
-    TWILIO_ACCOUNT_SID: str = ""
-    TWILIO_AUTH_TOKEN: str = ""
-    TWILIO_WHATSAPP_NUMBER: str = ""
 
     # ── Scheduler ─────────────────────────────────────────────────────────
     SCHEDULER_HOUR: int = 18  # 18:00 GMT
     SCHEDULER_MINUTE: int = 0
 
     # ── CORS ──────────────────────────────────────────────────────────────
-    CORS_ORIGINS: list[str] = ["*"]
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:5173", 
+        "http://localhost:3000",
+        "https://dropout-early-warning.vercel.app",
+        "*"
+    ]
 
 
 @lru_cache()

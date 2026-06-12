@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Sliders,
-  MessageSquare,
   Database,
   Upload,
   RefreshCw,
@@ -11,7 +10,7 @@ import {
   AlertTriangle,
   PlayCircle,
 } from 'lucide-react';
-import { fetchSettings, updateSettings, uploadCSV, triggerRetrain, factoryReset } from '../services/api';
+import { fetchSettings, updateSettings, uploadCSV, factoryReset } from '../services/api';
 import api from '../services/api';
 import { SkeletonCard } from '../components/shared/Skeleton';
 import ErrorState from '../components/shared/ErrorState';
@@ -23,10 +22,6 @@ export default function SettingsPage() {
 
   const [settings, setSettings] = useState({
     risk_threshold: 0.5,
-    sms_api_key: '',
-    sms_sender_id: '',
-    sms_enabled: false,
-    auto_alert: false,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -38,6 +33,20 @@ export default function SettingsPage() {
   const [resetting, setResetting] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [predicting, setPredicting] = useState(false);
+
+  const handleFactoryReset = async () => {
+    setResetting(true);
+    try {
+      await factoryReset();
+      addToast('Factory reset completed successfully', 'success');
+      setShowResetModal(false);
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+      addToast(typeof detail === 'string' ? detail : 'Factory reset failed', 'error');
+    } finally {
+      setResetting(false);
+    }
+  };
 
   const loadSettings = useCallback(async () => {
     setLoading(true);
@@ -213,60 +222,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="settings-row">
-          <div className="settings-row-info">
-            <span className="settings-row-label">Auto-Alert on High Risk</span>
-            <span className="settings-row-desc">
-              Automatically send SMS alerts when students cross the risk threshold after batch scoring.
-            </span>
-          </div>
-          <button
-            className={`toggle ${settings.auto_alert ? 'active' : ''}`}
-            onClick={() => setSettings({ ...settings, auto_alert: !settings.auto_alert })}
-          />
-        </div>
-      </div>
-
-      {/* SMS Configuration */}
-      <div className="glass-card slide-up stagger-2 settings-section">
-        <h3 className="settings-section-title">
-          <MessageSquare size={18} /> SMS Configuration (Africa's Talking)
-        </h3>
-
-        <div className="settings-row">
-          <div className="settings-row-info">
-            <span className="settings-row-label">SMS Enabled</span>
-            <span className="settings-row-desc">
-              Enable or disable SMS alert functionality globally.
-            </span>
-          </div>
-          <button
-            className={`toggle ${settings.sms_enabled ? 'active' : ''}`}
-            onClick={() => setSettings({ ...settings, sms_enabled: !settings.sms_enabled })}
-          />
-        </div>
-
-        <div className="form-group" style={{ marginTop: 12 }}>
-          <label className="form-label">API Key</label>
-          <input
-            type="password"
-            className="form-input"
-            placeholder="Enter Africa's Talking API key..."
-            value={settings.sms_api_key}
-            onChange={(e) => setSettings({ ...settings, sms_api_key: e.target.value })}
-          />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Sender ID</label>
-          <input
-            type="text"
-            className="form-input"
-            placeholder="e.g. EWS-ALERT"
-            value={settings.sms_sender_id}
-            onChange={(e) => setSettings({ ...settings, sms_sender_id: e.target.value })}
-          />
-        </div>
       </div>
 
       {/* Data Management */}
@@ -406,7 +361,7 @@ export default function SettingsPage() {
           <div className="settings-row-info">
             <span className="settings-row-label" style={{ color: '#ef4444' }}>Factory Reset System</span>
             <span className="settings-row-desc">
-              Permanently delete all students, predictions, alerts, and intervention logs. Settings and API keys will be preserved.
+              Permanently delete all students, predictions, and intervention logs. Settings will be preserved.
             </span>
           </div>
           <button
@@ -446,7 +401,7 @@ export default function SettingsPage() {
                 This will <strong>permanently delete</strong> all students, predictions, alerts, and intervention logs.
               </p>
               <p style={{ color: 'var(--text-secondary)', marginTop: 12, lineHeight: 1.5 }}>
-                Your settings (Risk Threshold and SMS API keys) will be preserved. This action cannot be undone.
+                Your settings (Risk Threshold) will be preserved. This action cannot be undone.
               </p>
             </div>
             <div className="modal-footer">

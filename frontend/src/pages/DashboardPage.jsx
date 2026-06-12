@@ -2,20 +2,19 @@ import useApi from '../hooks/useApi';
 import {
   fetchDashboardOverview,
   fetchRiskDistribution,
-  fetchRecentAlerts,
   fetchFeatureImportance,
+  fetchHeatmapData,
 } from '../services/api';
 import MetricsCards from '../components/dashboard/MetricsCards';
 import RiskDistribution from '../components/dashboard/RiskDistribution';
 import CohortOverview from '../components/dashboard/CohortOverview';
 import RiskHeatMap from '../components/dashboard/RiskHeatMap';
-import RecentAlerts from '../components/dashboard/RecentAlerts';
 
 export default function DashboardPage() {
   const overview = useApi(fetchDashboardOverview);
   const distribution = useApi(fetchRiskDistribution);
-  const alerts = useApi(fetchRecentAlerts);
   const importance = useApi(fetchFeatureImportance);
+  const heatmap = useApi(fetchHeatmapData);
 
   // Map backend response to MetricsCards shape
   const metricsData = overview.data
@@ -26,8 +25,8 @@ export default function DashboardPage() {
           overview.data.total_students > 0
             ? (overview.data.flagged_students / overview.data.total_students) * 100
             : 0,
-        intervention_rate: overview.data.dropout_rate,
-        model_auc: overview.data.average_risk_score,
+        dropout_rate: overview.data.dropout_rate,
+        average_risk_score: overview.data.average_risk_score,
       }
     : null;
 
@@ -51,10 +50,10 @@ export default function DashboardPage() {
       </div>
 
       <RiskHeatMap
-        data={overview.data}
-        loading={overview.loading}
-        error={overview.error}
-        onRetry={overview.refetch}
+        data={heatmap.data?.items || heatmap.data}
+        loading={heatmap.loading}
+        error={heatmap.error}
+        onRetry={heatmap.refetch}
       />
 
     </div>

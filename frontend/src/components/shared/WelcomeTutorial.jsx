@@ -30,7 +30,7 @@ export default function WelcomeTutorial({ forceShow = false, onClose }) {
     },
     {
       title: "Take Immediate Action",
-      desc: "Reach students where they are. Instantly trigger SMS or WhatsApp alerts to counsellors or students directly from the dashboard.",
+      desc: "Log interventions and track counselling activities directly from the dashboard.",
       img: "/assets/slide3.png"
     }
   ];

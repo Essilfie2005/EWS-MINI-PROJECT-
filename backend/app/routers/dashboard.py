@@ -83,41 +83,26 @@ async def get_dashboard_summary(db: AsyncSession = Depends(get_db)):
     lc = labelled_count.scalar_one()
     dropout_rate = (dc / lc * 100) if lc > 0 else None
 
-    # Feature statistics
+    # Feature statistics - single query to avoid N+1
     feature_stats = []
+    students_res = await db.execute(select(Student))
+    students = students_res.scalars().all()
+    
     for col in FEATURE_COLS:
-        col_attr = getattr(Student, col)
-        stats_result = await db.execute(
-            select(
-                func.avg(col_attr),
-                func.min(col_attr),
-                func.max(col_attr),
-            )
-        )
-        row = stats_result.one()
-        mean_val = float(row[0]) if row[0] is not None else 0.0
-        min_val = float(row[1]) if row[1] is not None else 0.0
-        max_val = float(row[2]) if row[2] is not None else 0.0
-
-        # Compute median and std via pulling all values (SQLite doesn't have native median)
-        all_vals_result = await db.execute(select(col_attr))
-        all_vals = [r[0] for r in all_vals_result.all() if r[0] is not None]
-
-        if all_vals:
-            median_val = float(np.median(all_vals))
-            std_val = float(np.std(all_vals))
+        vals = [getattr(s, col) for s in students if getattr(s, col) is not None]
+        if vals:
+            feature_stats.append(FeatureStats(
+                feature=col,
+                mean=round(float(np.mean(vals)), 2),
+                median=round(float(np.median(vals)), 2),
+                std=round(float(np.std(vals)), 2),
+                min=round(float(np.min(vals)), 2),
+                max=round(float(np.max(vals)), 2),
+            ))
         else:
-            median_val = 0.0
-            std_val = 0.0
-
-        feature_stats.append(FeatureStats(
-            feature=col,
-            mean=round(mean_val, 2),
-            median=round(median_val, 2),
-            std=round(std_val, 2),
-            min=round(min_val, 2),
-            max=round(max_val, 2),
-        ))
+            feature_stats.append(FeatureStats(
+                feature=col, mean=0.0, median=0.0, std=0.0, min=0.0, max=0.0
+            ))
 
     # Recent alerts count (last 24h)
     from datetime import datetime, timedelta, timezone

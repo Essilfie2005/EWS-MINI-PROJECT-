@@ -223,8 +223,9 @@ export default function StudentsPage() {
             {/* Pagination */}
             <div className="pagination">
               <span className="pagination-info">
-                Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of{' '}
-                {filtered.length} students
+                {filtered.length === 0
+                  ? 'No students found'
+                  : `Showing ${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, filtered.length)} of ${filtered.length} students`}
               </span>
               <div className="pagination-controls">
                 <button

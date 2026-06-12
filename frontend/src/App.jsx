@@ -4,7 +4,7 @@ import DashboardPage from './pages/DashboardPage.jsx';
 import StudentsPage from './pages/StudentsPage.jsx';
 import StudentDetailPage from './pages/StudentDetailPage.jsx';
 import InterventionsPage from './pages/InterventionsPage.jsx';
-import AlertsPage from './pages/AlertsPage.jsx';
+
 import SettingsPage from './pages/SettingsPage.jsx';
 import WelcomeTutorial from './components/shared/WelcomeTutorial.jsx';
 
@@ -18,7 +18,7 @@ function App() {
           <Route path="students" element={<StudentsPage />} />
           <Route path="students/:id" element={<StudentDetailPage />} />
           <Route path="interventions" element={<InterventionsPage />} />
-          <Route path="alerts" element={<AlertsPage />} />
+
           <Route path="settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

@@ -7,7 +7,6 @@ from app.services.shap_service import (
     generate_beeswarm_plot, export_shap_json,
 )
 from app.services.ctgan_service import train_ctgan_and_generate, save_synthetic_to_db
-from app.services.sms_service import send_sms, send_alert_sms, build_alert_message
 from app.services.scheduler import start_scheduler, stop_scheduler
 
 __all__ = [
@@ -17,6 +16,5 @@ __all__ = [
     "compute_shap_values", "get_top_risk_factors", "generate_waterfall_plot",
     "generate_beeswarm_plot", "export_shap_json",
     "train_ctgan_and_generate", "save_synthetic_to_db",
-    "send_sms", "send_alert_sms", "build_alert_message",
     "start_scheduler", "stop_scheduler",
 ]

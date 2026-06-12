@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { SkeletonMetrics } from '../shared/Skeleton';
 
 export default function MetricsCards({ data, loading }) {
+  const navigate = useNavigate();
+
   if (loading) return <SkeletonMetrics />;
   if (!data) return null;
-
-  const navigate = useNavigate();
 
   const cards = [
     {
@@ -27,17 +27,17 @@ export default function MetricsCards({ data, loading }) {
       path: '/students',
     },
     {
-      label: 'Intervention Rate',
-      value: data.intervention_rate != null ? `${data.intervention_rate.toFixed(1)}%` : '—',
-      trend: data.intervention_rate_trend,
+      label: 'Dropout Rate',
+      value: data.dropout_rate != null ? `${data.dropout_rate.toFixed(1)}%` : '—',
+      trend: data.dropout_rate_trend,
       icon: HeartHandshake,
       color: 'warning',
       path: '/interventions',
     },
     {
-      label: 'Model AUC Score',
-      value: data.model_auc != null ? data.model_auc.toFixed(3) : '—',
-      trend: data.model_auc_trend,
+      label: 'Average Risk Score',
+      value: data.average_risk_score != null ? data.average_risk_score.toFixed(3) : '—',
+      trend: data.average_risk_score_trend,
       icon: BrainCircuit,
       color: 'success',
       path: '/settings',

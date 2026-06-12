@@ -112,7 +112,7 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS,
-        allow_credentials=True,
+        allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -137,16 +137,6 @@ def create_app() -> FastAPI:
             "version": settings.APP_VERSION,
             "docs": "/docs",
             "health": "/api/dashboard/health",
-        }
-
-    @app.get("/api/dashboard/health", tags=["System"])
-    async def get_health():
-        return {
-            "status": "healthy",
-            "version": settings.APP_VERSION,
-            "deployment_tag": "b66116f_plus_test",
-            "model_loaded": ml_pipeline.model is not None,
-            "database_ok": True,
         }
 
     return app

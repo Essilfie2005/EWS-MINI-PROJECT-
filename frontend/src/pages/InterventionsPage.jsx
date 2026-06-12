@@ -8,7 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import { fetchInterventions, fetchInterventionStats, createIntervention } from '../services/api';
+import { fetchInterventions, createIntervention } from '../services/api';
 import { SkeletonTable, SkeletonCard } from '../components/shared/Skeleton';
 import ErrorState from '../components/shared/ErrorState';
 import { useToast } from '../context/ToastContext';
@@ -97,7 +97,7 @@ export default function InterventionsPage() {
   return (
     <div className="fade-in">
       {/* Stats Row */}
-      <div className="metrics-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: 24 }}>
+      <div className="metrics-grid" style={{ marginBottom: 24 }}>
         {loading ? (
           <>
             <SkeletonCard height={90} />

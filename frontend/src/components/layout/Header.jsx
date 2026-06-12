@@ -1,12 +1,11 @@
-import { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Search, Bell, Menu } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { Menu } from 'lucide-react';
 
 const pageTitles = {
   '/': 'Dashboard',
   '/students': 'Students',
   '/interventions': 'Interventions',
-  '/alerts': 'Alerts & SMS',
+
   '/settings': 'Settings',
 };
 
@@ -17,15 +16,6 @@ function getPageTitle(pathname) {
 
 export default function Header({ sidebarCollapsed, onMobileMenuToggle }) {
   const location = useLocation();
-  const navigate = useNavigate();
-  const [query, setQuery] = useState('');
-
-  const handleSearch = (e) => {
-    if (e.key === 'Enter' && query.trim()) {
-      navigate(`/students?search=${encodeURIComponent(query.trim())}`);
-      setQuery(''); // clear after search
-    }
-  };
 
   return (
     <header className={`header ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>

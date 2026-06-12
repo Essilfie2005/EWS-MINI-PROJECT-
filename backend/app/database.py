@@ -19,6 +19,8 @@ settings = get_settings()
 connect_args = {}
 if "postgres" in settings.DATABASE_URL:
     connect_args["statement_cache_size"] = 0
+elif "sqlite" in settings.DATABASE_URL:
+    connect_args["check_same_thread"] = False
 
 engine = create_async_engine(
     settings.DATABASE_URL,

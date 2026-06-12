@@ -20,8 +20,7 @@ from sqlalchemy import select, update
 from app.config import get_settings
 from app.database import async_session_factory
 from app.models.db_models import Student, Prediction, Alert
-from app.services import ml_pipeline, shap_service, sms_service
-from app.utils.metrics import assign_risk_band
+from app.services import ml_pipeline, shap_service
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +34,6 @@ async def nightly_risk_assessment():
       2. Re-predict risk scores
       3. Update student records
       4. Create alerts for new HIGH-risk students
-      5. Batch-send SMS (via mock/real AT)
     """
     logger.info("═══ Starting nightly risk assessment ═══")
     settings = get_settings()
@@ -112,16 +110,6 @@ async def nightly_risk_assessment():
                 newly_flagged.append((student, top_factors))
 
         await session.commit()
-
-        # 5. Batch SMS for newly flagged (logged in mock mode)
-        for student, factors in newly_flagged:
-            sms_service.send_alert_sms(
-                phone_number="+233000000000",  # placeholder; real phone from student profile
-                student_anon_id=student.anon_id,
-                risk_score=student.risk_score,
-                risk_band=student.risk_band,
-                top_factors=factors,
-            )
 
         logger.info(
             "═══ Nightly assessment complete: %d students processed, %d newly flagged ═══",
