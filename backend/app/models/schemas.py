@@ -68,7 +68,7 @@ class PredictionRequest(BaseModel):
 
 
 class PredictionBatchRequest(BaseModel):
-    student_ids: Optional[list[int]] = None
+    student_id: Optional[list[int]] = None
 
 
 class SHAPValue(BaseModel):
@@ -103,7 +103,8 @@ class PredictionListResponse(BaseModel):
 
 class InterventionCreate(BaseModel):
     student_id: int
-    intervention_type: str = Field(..., pattern=r"^(SMS|EMAIL|COUNSELLING|TUTORING|OTHER)$")
+    intervention_type: str = Field(...,
+                                   pattern=r"^(SMS|EMAIL|COUNSELLING|TUTORING|OTHER)$")
     description: Optional[str] = None
 
 
@@ -229,14 +230,3 @@ class SyntheticResponse(BaseModel):
 # ═══════════════════════════════════════════════════════════════════════════
 # SMS
 # ═══════════════════════════════════════════════════════════════════════════
-
-class SMSSendRequest(BaseModel):
-    student_id: int
-    phone_number: Optional[str] = None
-    custom_message: Optional[str] = None
-
-
-class SMSResponse(BaseModel):
-    success: bool
-    message: str
-    sms_id: Optional[str] = None
