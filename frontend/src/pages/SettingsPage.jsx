@@ -19,6 +19,8 @@ export default function SettingsPage() {
   const fileRef = useRef(null);
 
   const [settings, setSettings] = useState({ risk_threshold: 0.5 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [retraining, setRetraining] = useState(false);

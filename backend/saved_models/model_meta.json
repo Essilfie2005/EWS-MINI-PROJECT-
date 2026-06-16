@@ -1,35 +1,35 @@
 {
-  "model_version": "v20260612_003932",
+  "model_version": "v20260612_072542",
   "best_params": {
-    "n_estimators": 132,
-    "max_depth": 4,
-    "learning_rate": 0.15246388978963848,
-    "subsample": 0.9269183209102567,
-    "colsample_bytree": 0.7898398663721797,
-    "scale_pos_weight": 4.74649529796983,
-    "min_child_weight": 10,
-    "gamma": 2.681284320194429,
-    "reg_alpha": 1.603060927016785e-07,
-    "reg_lambda": 0.00341221658488198
+    "n_estimators": 326,
+    "max_depth": 3,
+    "learning_rate": 0.22247174255911695,
+    "subsample": 0.6923309846474148,
+    "colsample_bytree": 0.9026390407726536,
+    "scale_pos_weight": 7.248768119681759,
+    "min_child_weight": 7,
+    "gamma": 3.925772978784877,
+    "reg_alpha": 1.9449945904431079,
+    "reg_lambda": 0.5511860801867299
   },
-  "optuna_best_auc": 0.9965858138404192,
+  "optuna_best_auc": 0.9953541137701907,
   "test_metrics": {
     "auc_roc": 0.9949706227967098,
-    "f1_score": 0.9411764705882353,
-    "pr_auc": 0.9930404069861423,
-    "cohen_kappa": 0.9025748086290883,
-    "accuracy": 0.9533333333333334,
-    "precision": 0.9105691056910569,
-    "recall": 0.9739130434782609
+    "f1_score": 0.944206008583691,
+    "pr_auc": 0.9928241910349407,
+    "cohen_kappa": 0.9087932647333957,
+    "accuracy": 0.9566666666666667,
+    "precision": 0.9322033898305084,
+    "recall": 0.9565217391304348
   },
   "confusion_matrix": [
     [
-      174,
-      11
+      177,
+      8
     ],
     [
-      3,
-      112
+      5,
+      110
     ]
   ],
   "train_size": 1400,
@@ -42,5 +42,5 @@
     "mobile_engagement_freq",
     "financial_aid_status"
   ],
-  "trained_at": "2026-06-12T00:39:32.729322+00:00"
+  "trained_at": "2026-06-12T07:25:42.843360+00:00"
 }
