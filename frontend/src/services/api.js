@@ -65,6 +65,18 @@ export const updateIntervention = (id, payload) => api.put(`/interventions/${id}
 export const fetchInterventions = (params) => api.get('/interventions/', { params });
 export const fetchStudentInterventions = (studentId) => api.get(`/interventions/student/${studentId}`);
 
+// ──── Alerts ────────────────────────────────────────────────────────
+export const fetchAlerts = (params) => api.get('/alerts/', { params });
+export const markAlertRead = (id) => api.patch(`/alerts/${id}/read`);
+export const markAllAlertsRead = () => api.post('/alerts/mark-all-read');
+export const sendSmsAlert = (payload) => api.post('/alerts/send', payload);
+export const triggerBatchAlerts = () => api.post('/alerts/trigger-batch');
+
+// ──── Analytics ──────────────────────────────────────────────────────
+export const fetchRocCurve = () => api.get('/dashboard/roc-curve');
+export const fetchBeeswarmData = () => api.get('/dashboard/beeswarm');
+export const fetchPilotMetrics = () => api.get('/dashboard/pilot-metrics');
+
 // ──── Data Management ───────────────────────────
 export const uploadCSV = (formData) =>
   api.post('/students/upload-csv', formData, {

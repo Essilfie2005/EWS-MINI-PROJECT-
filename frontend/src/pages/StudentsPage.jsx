@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { Search, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Eye, Upload } from 'lucide-react';
 import { fetchStudents } from '../services/api';
 import { SkeletonTable } from '../components/shared/Skeleton';
 import ErrorState from '../components/shared/ErrorState';

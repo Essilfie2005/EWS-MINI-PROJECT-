@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 
-export default function Layout() {
+export default function Layout({ onLogout }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -20,6 +20,7 @@ export default function Layout() {
         <Header
           sidebarCollapsed={collapsed}
           onMobileMenuToggle={() => setMobileOpen((p) => !p)}
+          onLogout={onLogout}
         />
         <main className="page-content">
           <Outlet />

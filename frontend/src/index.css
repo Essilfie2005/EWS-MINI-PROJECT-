@@ -1791,3 +1791,87 @@ input, select, textarea {
     letter-spacing: 0.05em;
   }
 }
+
+/* ---------- Missing stagger delays ---------- */
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+
+/* ---------- Warning toast ---------- */
+.toast.warning {
+  border-color: rgba(245, 158, 11, 0.3);
+}
+.toast.warning svg { color: var(--warning); }
+
+/* ---------- Mobile — sidebar overlay fix ---------- */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  .sidebar.mobile-open {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+  }
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  .student-detail-grid {
+    grid-template-columns: 1fr;
+  }
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .page-content {
+    padding: 16px 12px 40px;
+  }
+  .glass-card {
+    padding: 16px;
+  }
+  .header {
+    padding: 0 16px;
+  }
+  .header-search {
+    display: none;
+  }
+  /* Analytics canvas */
+  canvas {
+    height: 260px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+  .gauge-ring {
+    width: 140px;
+    height: 140px;
+  }
+  .gauge-value .score {
+    font-size: 28px;
+  }
+  .modal-content {
+    padding: 20px 16px;
+    max-height: 92vh;
+  }
+  .heatmap-grid {
+    grid-template-columns: repeat(auto-fill, minmax(12px, 1fr));
+  }
+}
+
+/* ---------- Spin utility (for Loader2 icon) ---------- */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+
+/* ---------- Modal body/footer (used in reset modal) ---------- */
+.modal-body {
+  margin-bottom: 24px;
+}
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}

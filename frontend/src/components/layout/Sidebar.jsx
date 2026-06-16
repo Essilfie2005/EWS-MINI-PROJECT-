@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   Users,
   HandHelping,
+  BarChart2,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -13,6 +14,7 @@ const navLinks = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/students', label: 'Students', icon: Users },
   { to: '/interventions', label: 'Interventions', icon: HandHelping },
+  { to: '/analytics', label: 'Analytics', icon: BarChart2 },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 

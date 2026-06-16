@@ -79,7 +79,7 @@ export default function RiskDistribution({ data, loading, error, onRetry }) {
       </div>
     );
 
-  // Normalise: backend may return [{risk_band, count, avg_score}] or {low:N, medium:N, high:N}
+  // Normalise: backend may return [{risk_band, count}] or {LOW: {count, avg_score}, ...} or {low:N, ...}
   let items = [];
   if (Array.isArray(data)) {
     items = data.map((d) => ({
@@ -87,10 +87,9 @@ export default function RiskDistribution({ data, loading, error, onRetry }) {
       count: d.count || d.value || 0,
     }));
   } else if (typeof data === 'object' && data !== null) {
-    // Object format like {low: 100, medium: 50, high: 30}
-    items = Object.entries(data).map(([band, count]) => ({
+    items = Object.entries(data).map(([band, val]) => ({
       band: band.toLowerCase(),
-      count: typeof count === 'number' ? count : 0,
+      count: typeof val === 'number' ? val : (val?.count ?? 0),
     }));
   }
 

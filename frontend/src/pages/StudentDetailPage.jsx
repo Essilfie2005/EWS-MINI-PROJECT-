@@ -20,6 +20,7 @@ import { fetchStudentDetail, createIntervention, updateIntervention, triggerSing
 import { SkeletonCard, SkeletonChart } from '../components/shared/Skeleton';
 import ErrorState from '../components/shared/ErrorState';
 import { useToast } from '../context/ToastContext';
+import SmsAlertTrigger from '../components/dashboard/SmsAlertTrigger';
 
 /* ── helpers ── */
 function getRiskColor(band) {
@@ -301,6 +302,13 @@ export default function StudentDetailPage() {
           <button className="btn btn-secondary btn-sm" onClick={() => setShowModal(true)}>
             <ClipboardPlus size={14} /> Log Intervention
           </button>
+          {(student?.risk_band === 'high' || student?.risk_band === 'critical') && (
+            <SmsAlertTrigger
+              studentId={id}
+              studentData={student}
+              onSent={loadStudent}
+            />
+          )}
         </div>
       </div>
 

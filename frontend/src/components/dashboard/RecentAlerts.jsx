@@ -1,12 +1,14 @@
 import { Clock } from 'lucide-react';
 import { SkeletonChart } from '../shared/Skeleton';
+import SmsAlertTrigger from './SmsAlertTrigger';
 
-export default function RecentAlerts({ data, loading }) {
+export default function RecentAlerts({ data, loading, onAlertSent }) {
   if (loading)
     return (
       <div className="glass-card">
         <div className="section-header">
           <h3 className="section-title">Recent Alerts</h3>
+          <SmsAlertTrigger onSent={onAlertSent} />
         </div>
         <SkeletonChart height={200} />
       </div>
@@ -19,6 +21,7 @@ export default function RecentAlerts({ data, loading }) {
       <div className="glass-card">
         <div className="section-header">
           <h3 className="section-title">Recent Alerts</h3>
+          <SmsAlertTrigger onSent={onAlertSent} />
         </div>
         <div className="empty-state" style={{ padding: '32px 16px' }}>
           <Clock style={{ width: 32, height: 32, color: 'var(--text-dim)', marginBottom: 8 }} />
@@ -32,6 +35,7 @@ export default function RecentAlerts({ data, loading }) {
     <div className="glass-card slide-up">
       <div className="section-header">
         <h3 className="section-title">Recent Alerts</h3>
+        <SmsAlertTrigger onSent={onAlertSent} />
       </div>
       <div style={{ maxHeight: 320, overflowY: 'auto' }}>
         {alertList.map((alert, i) => (

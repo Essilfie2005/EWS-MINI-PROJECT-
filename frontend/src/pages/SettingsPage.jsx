@@ -12,19 +12,13 @@ import {
 } from 'lucide-react';
 import { fetchSettings, updateSettings, uploadCSV, factoryReset } from '../services/api';
 import api from '../services/api';
-import { SkeletonCard } from '../components/shared/Skeleton';
-import ErrorState from '../components/shared/ErrorState';
 import { useToast } from '../context/ToastContext';
 
 export default function SettingsPage() {
   const addToast = useToast();
   const fileRef = useRef(null);
 
-  const [settings, setSettings] = useState({
-    risk_threshold: 0.5,
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [settings, setSettings] = useState({ risk_threshold: 0.5 });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [retraining, setRetraining] = useState(false);
@@ -57,8 +51,8 @@ export default function SettingsPage() {
         setSettings((prev) => ({ ...prev, ...res.data }));
       }
     } catch (err) {
-      const detail = err.response?.data?.detail;
-      setError(typeof detail === 'string' ? detail : err.message || 'Failed to load settings');
+      // settings are stored locally — don't block the page on failure, just use defaults
+      console.warn('Could not load settings, using defaults:', err.message);
     } finally {
       setLoading(false);
     }
@@ -85,8 +79,13 @@ export default function SettingsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.name.endsWith('.csv')) {
-      addToast('Please select a CSV file', 'error');
+    // Reset input immediately so the same file can be re-selected after an error
+    if (fileRef.current) fileRef.current.value = '';
+
+    const allowed = ['.csv', '.pdf', '.doc', '.docx'];
+    const ext = '.' + file.name.split('.').pop().toLowerCase();
+    if (!allowed.includes(ext)) {
+      addToast('Please upload a CSV, PDF, or Word (.docx) file', 'error');
       return;
     }
 
@@ -100,7 +99,6 @@ export default function SettingsPage() {
       setUploadResult(result);
       const count = (result.inserted || 0) + (result.updated || 0);
       addToast(`✅ ${count} students processed (${result.inserted || 0} new, ${result.updated || 0} updated)`, 'success');
-      setUploading(false);
 
       // Fire predictions in background — don't block UI
       setPredicting(true);
@@ -115,14 +113,18 @@ export default function SettingsPage() {
           setPredicting(false);
         });
     } catch (err) {
-      const detail = err.response?.data?.detail;
-      const msg = typeof detail === 'string' ? detail
-        : Array.isArray(detail) ? detail.map(d => d.msg || JSON.stringify(d)).join('; ')
-        : 'Upload failed';
-      addToast(msg, 'error');
-      setUploading(false);
+      // Friendly message when backend is simply not running
+      if (!err.response) {
+        addToast('Cannot reach backend — make sure the server is running on port 8000.', 'error');
+      } else {
+        const detail = err.response?.data?.detail;
+        const msg = typeof detail === 'string' ? detail
+          : Array.isArray(detail) ? detail.map(d => d.msg || JSON.stringify(d)).join('; ')
+          : `Upload failed (${err.response.status})`;
+        addToast(msg, 'error');
+      }
     } finally {
-      if (fileRef.current) fileRef.current.value = '';
+      setUploading(false);
     }
   };
 
@@ -158,28 +160,6 @@ export default function SettingsPage() {
         setPredicting(false);
       });
   };
-
-  if (loading) {
-    return (
-      <div className="fade-in" style={{ maxWidth: 720 }}>
-        <SkeletonCard height={200} />
-        <div style={{ height: 20 }} />
-        <SkeletonCard height={180} />
-        <div style={{ height: 20 }} />
-        <SkeletonCard height={150} />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="fade-in" style={{ maxWidth: 720 }}>
-        <div className="glass-card">
-          <ErrorState message={error} onRetry={loadSettings} />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="fade-in" style={{ maxWidth: 720 }}>
@@ -232,17 +212,18 @@ export default function SettingsPage() {
 
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">Upload Student Data</span>
+            <span className="settings-row-label">Upload Week 6 Cohort Data</span>
             <span className="settings-row-desc">
-              Upload a CSV with columns: <strong>student_id, attendance_rate, quiz_average,
-              assignment_submission_rate, mobile_engagement_freq, financial_aid_status</strong>
+              Upload the entire foundation-year cohort at Week 6. Accepts <strong>CSV, PDF, or Word (.docx)</strong>.<br />
+              <strong>Required:</strong> student_id (8 digits) · index_number (7 digits) · mid_sem_result (out of 30)<br />
+              <strong>Optional but recommended:</strong> attendance_rate (%) · end_sem_result (out of 70)
             </span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
             <input
               ref={fileRef}
               type="file"
-              accept=".csv"
+              accept=".csv,.pdf,.doc,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,text/csv"
               onChange={handleUpload}
               style={{ display: 'none' }}
             />
@@ -256,7 +237,7 @@ export default function SettingsPage() {
               ) : predicting ? (
                 <><Loader2 size={14} className="spin" /> Scoring...</>
               ) : (
-                <><Upload size={14} /> Upload CSV</>
+                <><Upload size={14} /> Upload File</>
               )}
             </button>
           </div>

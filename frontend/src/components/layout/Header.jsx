@@ -1,11 +1,11 @@
 import { useLocation } from 'react-router-dom';
-import { Menu } from 'lucide-react';
+import { Menu, LogOut } from 'lucide-react';
 
 const pageTitles = {
   '/': 'Dashboard',
   '/students': 'Students',
   '/interventions': 'Interventions',
-
+  '/analytics': 'Analytics',
   '/settings': 'Settings',
 };
 
@@ -14,7 +14,7 @@ function getPageTitle(pathname) {
   return pageTitles[pathname] || 'Dashboard';
 }
 
-export default function Header({ sidebarCollapsed, onMobileMenuToggle }) {
+export default function Header({ sidebarCollapsed, onMobileMenuToggle, onLogout }) {
   const location = useLocation();
 
   return (
@@ -27,8 +27,15 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }) {
       </div>
 
       <div className="header-right">
-
-
+        {onLogout && (
+          <button
+            className="header-icon-btn"
+            title="Sign out"
+            onClick={onLogout}
+          >
+            <LogOut size={16} />
+          </button>
+        )}
         <div className="header-avatar" title="Administrator">
           AD
         </div>
