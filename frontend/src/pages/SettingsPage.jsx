@@ -9,8 +9,9 @@ import {
   CheckCircle2,
   AlertTriangle,
   PlayCircle,
+  Brain,
 } from 'lucide-react';
-import { fetchSettings, updateSettings, uploadCSV, factoryReset } from '../services/api';
+import { fetchSettings, updateSettings, uploadCSV, factoryReset, generateShapBatch } from '../services/api';
 import api from '../services/api';
 import { useToast } from '../context/ToastContext';
 
@@ -29,6 +30,7 @@ export default function SettingsPage() {
   const [resetting, setResetting] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [predicting, setPredicting] = useState(false);
+  const [shapBatch, setShapBatch] = useState(false);
 
   const handleFactoryReset = async () => {
     setResetting(true);
@@ -309,6 +311,38 @@ export default function SettingsPage() {
             </div>
           </div>
         )}
+
+        <div className="settings-row" style={{ marginTop: 16 }}>
+          <div className="settings-row-info">
+            <span className="settings-row-label">Generate SHAP Explanations</span>
+            <span className="settings-row-desc">
+              Pre-compute SHAP explanations for all scored students so the Analytics Beeswarm chart is fully populated. Takes 2–5 minutes.
+            </span>
+          </div>
+          <button
+            className="btn btn-secondary btn-sm"
+            disabled={shapBatch || retraining || predicting}
+            onClick={async () => {
+              setShapBatch(true);
+              addToast('Generating SHAP explanations in background…', 'info');
+              try {
+                const res = await generateShapBatch();
+                addToast(`✅ SHAP queued for ${res.data.total} students. Refresh Analytics in a minute.`, 'success');
+              } catch (err) {
+                addToast('Could not start SHAP batch — is the backend running?', 'error');
+              } finally {
+                setShapBatch(false);
+              }
+            }}
+          >
+            {shapBatch ? (
+              <><Loader2 size={14} className="spin" /> Generating…</>
+            ) : (
+              <><Brain size={14} /> Generate SHAP
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* System Tutorial */}

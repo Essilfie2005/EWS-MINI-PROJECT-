@@ -28,6 +28,7 @@ from app.routers import (
     interventions_router,
     system_router,
 )
+from app.routers.auth import router as auth_router
 
 # ── Logging ───────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -128,6 +129,7 @@ def create_app() -> FastAPI:
     app.include_router(alerts_router)
     app.include_router(interventions_router)
     app.include_router(system_router)
+    app.include_router(auth_router)
 
     # ── Root endpoint ─────────────────────────────────────────────────────
     @app.get("/", tags=["Root"])

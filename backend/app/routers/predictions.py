@@ -307,3 +307,127 @@ async def generate_beeswarm(db: AsyncSession = Depends(get_db)):
     filename = Path(plot_path).name
 
     return {"message": "Beeswarm plot generated", "plot_url": f"/static/plots/{filename}"}
+
+
+async def _run_shap_batch(student_ids: list[int]) -> None:
+    """
+    Background task: compute and store SHAP values for a list of student IDs.
+
+    Fetches each student from its own DB session, computes SHAP, then upserts
+    the result into the Prediction table (latest prediction row for that student).
+    Students are processed in chunks of 100 to avoid holding large result sets
+    in memory.
+    """
+    from app.database import AsyncSessionLocal  # avoid circular import at module level
+
+    BATCH_SIZE = 100
+    total = len(student_ids)
+    logger.info("SHAP batch: processing %d students in chunks of %d", total, BATCH_SIZE)
+
+    for batch_start in range(0, total, BATCH_SIZE):
+        chunk_ids = student_ids[batch_start : batch_start + BATCH_SIZE]
+
+        async with AsyncSessionLocal() as db:
+            try:
+                result = await db.execute(
+                    select(Student).where(Student.id.in_(chunk_ids))
+                )
+                students = result.scalars().all()
+
+                for student in students:
+                    features = {col: getattr(student, col) for col in FEATURE_COLS}
+
+                    try:
+                        shap_result = shap_service.compute_shap_values(features)
+                        top_factors = shap_service.get_top_risk_factors(features, top_n=3)
+                    except Exception as exc:
+                        logger.warning(
+                            "SHAP computation failed for student %s: %s",
+                            student.anon_id,
+                            exc,
+                        )
+                        continue
+
+                    # Build the same list-of-dicts format used by predict_student
+                    shap_values_json = json.dumps(
+                        [
+                            {
+                                "feature": sv["feature"],
+                                "value": sv["value"],
+                                "contribution": sv["contribution"],
+                            }
+                            for sv in shap_result["shap_values"]
+                        ]
+                    )
+                    top_factors_json = json.dumps(top_factors) if top_factors else None
+
+                    # Upsert: update the most-recent Prediction row if it exists,
+                    # otherwise insert a new one.
+                    pred_result = await db.execute(
+                        select(Prediction)
+                        .where(Prediction.student_id == student.id)
+                        .order_by(Prediction.created_at.desc())
+                        .limit(1)
+                    )
+                    existing = pred_result.scalar_one_or_none()
+
+                    if existing is not None:
+                        existing.shap_values = shap_values_json
+                        existing.top_factors = top_factors_json
+                    else:
+                        # No prediction row yet – create a minimal one carrying
+                        # only the SHAP payload (risk fields come from the Student).
+                        new_pred = Prediction(
+                            student_id=student.id,
+                            anon_id=student.anon_id,
+                            risk_score=student.risk_score if student.risk_score is not None else 0.0,
+                            risk_band=student.risk_band if student.risk_band is not None else "LOW",
+                            model_version=ml_pipeline.get_model_metadata().get("model_version", "v1")
+                            if ml_pipeline.get_model_metadata()
+                            else "v1",
+                            shap_values=shap_values_json,
+                            top_factors=top_factors_json,
+                        )
+                        db.add(new_pred)
+
+                await db.flush()
+                logger.info(
+                    "SHAP batch: committed chunk %d-%d",
+                    batch_start + 1,
+                    batch_start + len(students),
+                )
+            except Exception as exc:
+                logger.error("SHAP batch chunk failed (start=%d): %s", batch_start, exc)
+                await db.rollback()
+
+    logger.info("SHAP batch complete – processed %d students", total)
+
+
+@router.post("/generate-shap-batch")
+async def generate_shap_batch(
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Trigger background SHAP computation for all batch-predicted students.
+
+    Fetches every student that already has a risk_score (i.e. has gone through
+    batch prediction), then launches a background task to compute and store
+    SHAP values in the Prediction table.  Returns immediately with a count of
+    students queued.
+    """
+    if not ml_pipeline.is_model_loaded():
+        raise HTTPException(status_code=503, detail="No trained model available. Train the model first via POST /api/predictions/train")
+
+    result = await db.execute(
+        select(Student.id).where(Student.risk_score.isnot(None))
+    )
+    student_ids: list[int] = list(result.scalars().all())
+
+    if not student_ids:
+        return {"status": "no_op", "total": 0, "message": "No batch-predicted students found."}
+
+    background_tasks.add_task(_run_shap_batch, student_ids)
+
+    logger.info("generate-shap-batch: queued %d students for SHAP computation", len(student_ids))
+    return {"status": "started", "total": len(student_ids)}

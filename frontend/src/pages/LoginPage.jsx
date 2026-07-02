@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ShieldAlert, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { login } from '../services/api';
 
 // Demo credentials — replace with a real auth endpoint when available
 const DEMO_USER = 'admin';
@@ -16,16 +17,28 @@ export default function LoginPage({ onLogin }) {
     setError('');
     setLoading(true);
 
-    // Simulate async check (swap for real API call when auth is added)
-    await new Promise((r) => setTimeout(r, 600));
-
-    if (form.username === DEMO_USER && form.password === DEMO_PASS) {
-      localStorage.setItem('ews_token', btoa(`${form.username}:${form.password}`));
+    try {
+      // Try real backend auth
+      const res = await login(form.username, form.password);
+      localStorage.setItem('ews_token', res.data.token);
+      localStorage.setItem('ews_user', JSON.stringify({ username: res.data.username, role: res.data.role }));
       onLogin();
-    } else {
-      setError('Invalid username or password.');
+    } catch (err) {
+      if (!err.response) {
+        // Backend offline — use demo credentials so system still works offline
+        if (form.username === 'admin' && form.password === 'ews2024') {
+          localStorage.setItem('ews_token', btoa('admin:ews2024'));
+          localStorage.setItem('ews_user', JSON.stringify({ username: 'admin', role: 'counsellor' }));
+          onLogin();
+        } else {
+          setError('Invalid username or password.');
+        }
+      } else {
+        setError('Invalid username or password.');
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (

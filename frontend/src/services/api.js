@@ -10,6 +10,15 @@ const api = axios.create({
   },
 });
 
+// ──── Auth ──────────────────────────────────────────────────────────
+export const login = (username, password) =>
+  axios.post(`${API_BASE}/auth/login`, { username, password });
+
+export const logout = () => {
+  localStorage.removeItem('ews_token');
+  localStorage.removeItem('ews_user');
+};
+
 // Request interceptor — attach auth token if available
 api.interceptors.request.use(
   (config) => {
@@ -58,6 +67,7 @@ export const fetchModelInfo = () => api.get('/predictions/model-info');
 export const fetchPredictionHistory = (studentId) => api.get(`/predictions/history/${studentId}`);
 export const generateSyntheticData = () => api.post('/predictions/generate-synthetic');
 export const generateBeeswarm = () => api.post('/predictions/generate-beeswarm');
+export const generateShapBatch = () => api.post('/predictions/generate-shap-batch', {}, { timeout: 600000 });
 
 // ──── Interventions ─────────────────────────────
 export const createIntervention = (payload) => api.post('/interventions/', payload);
