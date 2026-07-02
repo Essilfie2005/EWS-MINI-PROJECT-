@@ -1,92 +1,213 @@
-# 🎓 Dropout Early-Warning System (EWS)
-
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Python](https://img.shields.io/badge/python-3.10+-blue.svg)
-![React](https://img.shields.io/badge/react-18.x-61dafb.svg)
-
-An AI-powered Early Warning System designed for university foundation programs (specifically tailored for West African institutions). The system uses Machine Learning to predict student dropout risk in real-time, provides Explainable AI (XAI) to educators, and helps counselors track interventions.
-
-This project was built as a Mini Project by **Group 3**.
+# Lightweight Dropout Prediction and Early Warning System (EWS)
+> **Explainable AI for University Foundation Programs in Ghana**  
+> CS Department | 2026 Batch Mini-Project | Group 3
 
 ---
 
-## ✨ Key Features
+## 🎯 Project Overview
 
-* **🤖 Predictive Machine Learning:** Utilises an **XGBoost** classifier with automated Hyperparameter Optimisation (via Optuna) to predict dropout risk.
-* **🧠 Explainable AI (XAI):** Integrates **SHAP** (SHapley Additive exPlanations) to provide waterfall plots and feature-importance metrics, explaining *why* a specific student is at risk.
-* **☁️ Cloud-Native Architecture:** 100% cloud-ready. Serializes the trained ML models directly into a **Supabase PostgreSQL** database, ensuring data and models survive ephemeral server spins on free hosting tiers like Render.
-* **🎨 Premium UI/UX:** A stunning, modern dashboard built with React and Vite, featuring glassmorphism, responsive mobile layouts, and a guided onboarding tutorial.
+This system identifies at-risk foundation-year students by **Week 6 of semester** using only five registry-available features — no LMS telemetry, no paid cloud services. It combines an **XGBoost classifier** with **SHAP explainability** to give counsellors plain-language briefs on why a student was flagged, and logs all interventions for tracking.
 
----
-
-## 🛠️ Technology Stack
-
-**Frontend:**
-* React.js (Vite)
-* Custom CSS (Glassmorphism & Responsive CSS Grid)
-* Axios (API Communication)
-* Recharts (Data Visualisation)
-* Lucide React (Icons)
-
-**Backend:**
-* Python 3 & FastAPI (Asynchronous Web Framework)
-* XGBoost & scikit-learn (Machine Learning Pipeline)
-* Optuna (Hyperparameter Tuning)
-* SHAP (Explainable AI)
-* SQLAlchemy + Asyncpg (Database ORM)
-* APScheduler (Background CRON Jobs)
-
-**Infrastructure:**
-* **Database:** Supabase (PostgreSQL)
-* **Frontend Hosting:** Vercel (Recommended)
-* **Backend Hosting:** Render (Recommended)
+**AUC-ROC: 0.997** (XGBoost) vs 0.753 (Rule-based) on 2,000 student records.
 
 ---
 
-## 🚀 Deployment Instructions
+## 👥 Group Members
 
-### 1. Backend (Render)
-1. Create a New Web Service on Render linked to this repository.
-2. Set the Root Directory to `backend`.
-3. Build Command: `pip install -r requirements.txt`
-4. Start Command: `uvicorn app.main:app --host 0.0.0.0 --port 10000`
-5. Add your `DATABASE_URL` as an Environment Variable (use your Supabase connection string).
-
-### 2. Frontend (Vercel)
-1. Import this repository into Vercel.
-2. Set the Root Directory to `frontend`.
-3. Set the Framework Preset to `Vite`.
-4. In Environment Variables, add `VITE_API_BASE_URL` and set it to your deployed Render URL (e.g., `https://your-backend.onrender.com/api`).
+| # | Index No. | Name | Role |
+|---|-----------|------|------|
+| 1 | 9019123 | Fobi Osei Randy Yamoah | ML / Data Engineer |
+| 2 | 9018323 | Angela Essein | Backend / Systems Dev |
+| 3 | 9019523 | Frank Fatawu Bakuwale Techi Junior | Frontend / Mobile Dev |
+| 4 | 9019323 | Fosu Kwame Korletey | Analytics / XAI Lead |
+| 5 | 9018623 | Essilfie David Amoabeng (PM) | EdTech / Pedagogy & PM |
 
 ---
 
-## 💻 Local Development Setup
+## 🏗️ System Architecture
 
-If you want to run the project locally on your machine:
-
-**1. Clone the repository**
-```bash
-git clone https://github.com/yourusername/dropout-early-warning.git
-cd dropout-early-warning
+```
+University Registry (CSV)
+        │
+        ▼
+Python ETL Pipeline  ←── CTGAN Synthetic Data (500 records)
+(SHA-256 anonymisation, feature engineering, imputation)
+        │
+        ▼
+  SQLite Database
+(students, predictions, interventions, alerts)
+        │
+        ├──► XGBoost Classifier (Optuna HPO) ──► Risk Score (0–1)
+        │           │
+        │           ▼
+        │    SHAP TreeExplainer ──► Waterfall Charts + Beeswarm
+        │
+        ▼
+  FastAPI REST API (async, APScheduler nightly job)
+        │
+        ▼
+  React Dashboard (university LAN, no internet required)
+  ├── Risk Heatmap (cohort overview)
+  ├── Student Drill-Down (SHAP waterfall)
+  ├── Analytics Page (ROC curve, Beeswarm, Pilot Metrics)
+  ├── Interventions Log
+  └── Settings (upload data, re-train model)
 ```
 
-**2. Start the Backend**
+**Deployment:** University server or Raspberry Pi 4 (8GB RAM). Zero paid cloud dependency.
+
+---
+
+## ⚙️ Tech Stack
+
+| Component | Technology | Version |
+|-----------|-----------|---------|
+| Language | Python | 3.11.8 |
+| ML Classifier | XGBoost + Optuna HPO | 2.0.3 / 3.4.0 |
+| Explainability | SHAP TreeExplainer | 0.44.0 |
+| Synthetic Data | CTGAN (SDV) | 1.9.0 |
+| Backend API | FastAPI + SQLAlchemy | 0.110.0 |
+| Database | SQLite (dev) / PostgreSQL (prod) | — |
+| Frontend | React 18 + Vite + Recharts | 18.2 |
+| Dataset | OULAD (Open University Learning Analytics) | Public |
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Python 3.11+
+- Node.js 18+
+
+### 1. Clone the repository
+```bash
+git clone https://github.com/Essilfie2005/EWS-MINI-PROJECT-.git
+cd EWS-MINI-PROJECT-
+```
+
+### 2. Start the Backend
 ```bash
 cd backend
 python -m venv venv
-source venv/Scripts/activate  # On Windows
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # macOS/Linux
+
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-**3. Start the Frontend**
+The backend will automatically:
+- Initialise the SQLite database
+- Download and seed the OULAD dataset (first run only, ~2 min)
+- Load the pre-trained XGBoost model
+
+### 3. Start the Frontend
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-*Note: The local setup will automatically fall back to an SQLite file (`dropout.db`) if no PostgreSQL `DATABASE_URL` is provided, ensuring seamless local testing.*
+Open **http://localhost:5173** in your browser.
+
+### 4. Login
+| Username | Password | Role |
+|----------|----------|------|
+| `admin` | `ews2024` | Administrator |
+| `counsellor` | `ews2024` | Counsellor |
 
 ---
-*Built with ❤️ for student success.*
+
+## 📊 Key Features
+
+### Dashboard
+- **Risk Heatmap** — colour-coded grid of all students (green/amber/red/critical)
+- **Cohort Summary** — total students, flagged count, average risk score
+- **Feature Importance** — XGBoost gain-based importance chart
+
+### Students Page
+- Search, sort, and filter by risk band
+- Click any student to open their full risk profile
+
+### Student Detail Page
+- **SHAP Waterfall Chart** — click "Generate Explanation" to see exactly which features drove the risk score
+- **Intervention Logging** — record counsellor contact, type, and outcome
+- **Risk History** — track how a student's risk score changes over time
+
+### Analytics Page
+- **ROC Curve** — XGBoost vs Logistic Regression vs Rule-based comparison
+- **SHAP Beeswarm** — cohort-level feature impact summary
+- **Pilot Metrics** — AUC-ROC, intervention conversion rate, usability score
+
+### Settings Page
+- **Upload Week 6 Cohort Data** (CSV)
+- **Re-train Model** — runs Optuna HPO for 100 trials, auto-scores all students
+- **Generate SHAP Explanations** — pre-computes SHAP for all students (populates Beeswarm chart)
+- **Factory Reset** — clears all student data
+
+---
+
+## 🔬 Model Performance
+
+| Metric | XGBoost | Logistic Regression | Rule-based |
+|--------|---------|-------------------|------------|
+| AUC-ROC | **0.997** | 0.997 | 0.753 |
+| Training Data | OULAD (2,000 students) | — | — |
+| Features | 5 registry features | — | attendance < 60% AND quiz < 40% |
+
+The 5 input features:
+1. `attendance_rate` — % of classes attended
+2. `quiz_average` — average quiz score
+3. `assignment_submission_rate` — % of assignments submitted
+4. `mobile_engagement_freq` — mobile login frequency
+5. `financial_aid_status` — IMD band (financial vulnerability indicator)
+
+---
+
+## 📁 Project Structure
+
+```
+dropout-early-warning/
+├── backend/
+│   ├── app/
+│   │   ├── routers/          # API endpoints (students, predictions, dashboard, auth)
+│   │   ├── services/         # ML pipeline, SHAP, CTGAN, scheduler
+│   │   ├── models/           # SQLAlchemy ORM models + Pydantic schemas
+│   │   ├── utils/            # OULAD seeding, metrics, anonymisation
+│   │   ├── main.py           # FastAPI app factory
+│   │   ├── config.py         # Settings (env vars)
+│   │   └── database.py       # Async SQLAlchemy engine
+│   ├── saved_models/         # Trained XGBoost model + scaler
+│   ├── plots/                # SHAP waterfall PNGs
+│   └── requirements.txt
+├── frontend/
+│   ├── src/
+│   │   ├── pages/            # Dashboard, Students, Analytics, Settings, Login
+│   │   ├── components/       # Layout, shared UI, dashboard widgets
+│   │   ├── services/api.js   # Axios API client
+│   │   └── context/          # Toast notifications
+│   └── package.json
+└── README.md
+```
+
+---
+
+## 🔒 Ethics & Privacy
+
+- All student IDs are **SHA-256 salted hashed** before storage
+- No personally identifiable information (PII) is stored
+- Compliant with the **Ghana Data Protection Act 2012**
+- CTGAN synthetic records are clearly flagged in the database
+- Counsellors log voluntary participation; logs deleted after 12 months
+
+---
+
+## 📄 Supervisor
+
+**Mr. Eric Opoku Osei** | Expected Completion: Mid-July 2026
+
+---
+
+## 📜 Licence
+
+MIT Licence — open for replication by any Ghanaian university.
