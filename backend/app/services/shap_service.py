@@ -24,23 +24,18 @@ import pandas as pd
 import shap
 
 from app.config import get_settings, PLOTS_DIR, SAVED_MODELS_DIR
+from app.services.ml_pipeline import engineer_features, FEATURE_COLS, ENGINEERED_FEATURE_COLS
 
 logger = logging.getLogger(__name__)
 
-FEATURE_COLS = [
-    "attendance_rate",
-    "quiz_average",
-    "assignment_submission_rate",
-    "mobile_engagement_freq",
-    "financial_aid_status",
-]
-
 FEATURE_LABELS = {
-    "attendance_rate": "Attendance Rate",
-    "quiz_average": "Quiz Average",
+    "attendance_rate":            "Attendance Rate",
+    "quiz_average":               "Quiz Average",
     "assignment_submission_rate": "Assignment Submission Rate",
-    "mobile_engagement_freq": "Mobile Engagement",
-    "financial_aid_status": "Financial Aid Status (IMD)",
+    "mobile_engagement_freq":     "Mobile Engagement",
+    "financial_aid_status":       "Financial Aid Status (IMD)",
+    "academic_performance_index": "Academic Performance Index",
+    "financial_academic_risk":    "Financial-Academic Risk",
 }
 
 
@@ -79,7 +74,10 @@ def compute_shap_values(features: dict[str, float]) -> dict[str, Any]:
     """
     model, scaler = _load_model_and_scaler()
 
-    x = np.array([[safe_float(features.get(col, 0.0)) for col in FEATURE_COLS]], dtype=np.float32)
+    # Build engineered feature row (5 raw + 2 derived = 7 total)
+    row_df = pd.DataFrame([{col: safe_float(features.get(col, 0.0)) for col in FEATURE_COLS}])
+    row_eng = engineer_features(row_df)
+    x = row_eng[ENGINEERED_FEATURE_COLS].values.astype(np.float32)
     x_scaled = scaler.transform(x)
 
     explainer = shap.TreeExplainer(model)
@@ -87,7 +85,7 @@ def compute_shap_values(features: dict[str, float]) -> dict[str, Any]:
 
     # shap_vals shape: (1, n_features) for binary
     sv = shap_vals[0] if isinstance(shap_vals, list) else shap_vals[0]
-    
+
     # Safely extract expected_value which can be a scalar, list, or array
     ev = explainer.expected_value
     if isinstance(ev, (list, tuple, np.ndarray)):
@@ -97,15 +95,20 @@ def compute_shap_values(features: dict[str, float]) -> dict[str, Any]:
 
     prob = safe_float(model.predict_proba(x_scaled)[0, 1])
 
+    # Engineered features are derived, so show their raw inputs for display
+    display_values = {**features}
+    display_values["academic_performance_index"] = safe_float(row_eng["academic_performance_index"].iloc[0])
+    display_values["financial_academic_risk"]    = safe_float(row_eng["financial_academic_risk"].iloc[0])
+
     result = {
         "shap_values": [
             {
-                "feature": FEATURE_LABELS.get(col, col),
+                "feature":     FEATURE_LABELS.get(col, col),
                 "feature_key": col,
-                "value": safe_float(features.get(col, 0.0)),
+                "value":       safe_float(display_values.get(col, 0.0)),
                 "contribution": safe_float(sv[i]),
             }
-            for i, col in enumerate(FEATURE_COLS)
+            for i, col in enumerate(ENGINEERED_FEATURE_COLS)
         ],
         "base_value": base,
         "prediction": prob,
@@ -148,14 +151,16 @@ def generate_waterfall_plot(
     """
     model, scaler = _load_model_and_scaler()
 
-    x = np.array([[safe_float(features.get(col, 0.0)) for col in FEATURE_COLS]], dtype=np.float32)
+    row_df = pd.DataFrame([{col: safe_float(features.get(col, 0.0)) for col in FEATURE_COLS}])
+    row_eng = engineer_features(row_df)
+    x = row_eng[ENGINEERED_FEATURE_COLS].values.astype(np.float32)
     x_scaled = scaler.transform(x)
 
     explainer = shap.TreeExplainer(model)
     explanation = explainer(x_scaled)
 
-    # Use human-readable feature names
-    explanation.feature_names = [FEATURE_LABELS.get(c, c) for c in FEATURE_COLS]
+    # Use human-readable feature names for all 7 features
+    explanation.feature_names = [FEATURE_LABELS.get(c, c) for c in ENGINEERED_FEATURE_COLS]
 
     save_dir = save_dir or PLOTS_DIR
     save_dir.mkdir(parents=True, exist_ok=True)
@@ -164,12 +169,12 @@ def generate_waterfall_plot(
     fig, ax = plt.subplots(figsize=(10, 7.5))
     shap.plots.waterfall(explanation[0], show=False)
 
-    plt.title(f"Risk Factor Analysis – Student {student_id[:12]}…", fontsize=12)
+    plt.title(f"Risk Factor Analysis - Student {student_id[:12]}...", fontsize=12)
     plt.tight_layout()
-    plt.savefig(plot_path, dpi=80, bbox_inches="tight")  # ≈ 800×600
+    plt.savefig(plot_path, dpi=80, bbox_inches="tight")  # approx 800x600
     plt.close("all")
 
-    logger.info("Waterfall plot saved → %s", plot_path)
+    logger.info("Waterfall plot saved -> %s", plot_path)
     return str(plot_path)
 
 
@@ -180,7 +185,8 @@ def generate_beeswarm_plot(df: pd.DataFrame, save_dir: Path | None = None) -> st
     """
     model, scaler = _load_model_and_scaler()
 
-    X = df[FEATURE_COLS].values.astype(np.float32)
+    df_eng = engineer_features(df[FEATURE_COLS])
+    X = df_eng[ENGINEERED_FEATURE_COLS].values.astype(np.float32)
     X_scaled = scaler.transform(X)
 
     explainer = shap.TreeExplainer(model)
@@ -198,15 +204,15 @@ def generate_beeswarm_plot(df: pd.DataFrame, save_dir: Path | None = None) -> st
     shap.summary_plot(
         shap_vals,
         X_scaled,
-        feature_names=[FEATURE_LABELS.get(c, c) for c in FEATURE_COLS],
+        feature_names=[FEATURE_LABELS.get(c, c) for c in ENGINEERED_FEATURE_COLS],
         show=False,
     )
-    plt.title("Cohort SHAP Summary – Dropout Risk Factors", fontsize=12)
+    plt.title("Cohort SHAP Summary - Dropout Risk Factors", fontsize=12)
     plt.tight_layout()
     plt.savefig(plot_path, dpi=80, bbox_inches="tight")
     plt.close("all")
 
-    logger.info("Beeswarm plot saved → %s", plot_path)
+    logger.info("Beeswarm plot saved -> %s", plot_path)
     return str(plot_path)
 
 
