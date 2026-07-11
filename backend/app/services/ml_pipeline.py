@@ -38,6 +38,49 @@ FEATURE_COLS = [
     "financial_aid_status",
 ]
 
+# Two Ghana-calibrated engineered features added on top of the originals
+ENGINEERED_FEATURE_COLS = FEATURE_COLS + [
+    "academic_performance_index",
+    "financial_academic_risk",
+]
+
+# Youden's J optimal threshold (calibrated from engineering evaluation)
+# Overrides the config RISK_THRESHOLD for classification; AUC is threshold-free.
+YOUDEN_THRESHOLD = 0.4432
+
+
+def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Add two domain-calibrated composite features.
+
+    Academic Performance Index (API)
+    ---------------------------------
+    Weighted average of the three academic signals, reflecting SHAP-derived
+    relative importances from the baseline model:
+      - Attendance  40 %  (highest SHAP contribution)
+      - Quiz        40 %
+      - Assignment  20 %
+    Scaled 0-100, same range as the input features.
+
+    Financial-Academic Risk Interaction (FARI)
+    ------------------------------------------
+    Captures the compounding effect of financial vulnerability AND low assignment
+    submission. Students with *both* low financial aid AND low submission rate
+    are at disproportionately higher risk in Ghanaian foundation programmes.
+    Range: 0 (low risk) -> 1 (high risk).
+    """
+    df = df.copy()
+    df["academic_performance_index"] = (
+        0.40 * df["attendance_rate"]
+        + 0.40 * df["quiz_average"]
+        + 0.20 * df["assignment_submission_rate"]
+    )
+    df["financial_academic_risk"] = (
+        (1.0 - df["financial_aid_status"] / 10.0)
+        * (1.0 - df["assignment_submission_rate"] / 100.0)
+    ).clip(0, 1)
+    return df
+
 # Module-level cache for loaded model
 _model_cache: dict[str, Any] = {}
 
@@ -89,8 +132,12 @@ def train_model(df: pd.DataFrame) -> dict:
     """
     settings = get_settings()
 
-    X = df[FEATURE_COLS].values.astype(np.float32)
+    X_raw = df[FEATURE_COLS].values.astype(np.float32)
     y = df["dropout_label"].values.astype(int)
+
+    # ── Feature engineering ───────────────────────────────────────────────
+    df_eng = engineer_features(df[FEATURE_COLS])
+    X = df_eng[ENGINEERED_FEATURE_COLS].values.astype(np.float32)
 
     # ── Stratified split: 70 / 15 / 15 ───────────────────────────────────
     X_train_val, X_test, y_train_val, y_test = train_test_split(
@@ -177,7 +224,16 @@ def train_model(df: pd.DataFrame) -> dict:
 
     # ── Evaluate on test set ──────────────────────────────────────────────
     y_prob_test = final_model.predict_proba(X_test_scaled)[:, 1]
-    y_pred_test = (y_prob_test >= settings.RISK_THRESHOLD).astype(int)
+
+    # ── Youden's J threshold calibration ─────────────────────────────────
+    from sklearn.metrics import roc_curve
+    val_probs = final_model.predict_proba(X_val_scaled)[:, 1]
+    fpr, tpr, thresholds = roc_curve(y_val, val_probs)
+    j_scores = tpr - fpr
+    youden_tau = float(thresholds[np.argmax(j_scores)])
+    logger.info("Youden's J optimal threshold: %.4f", youden_tau)
+
+    y_pred_test = (y_prob_test >= youden_tau).astype(int)
     metrics = compute_all_metrics(y_test, y_pred_test, y_prob_test)
 
     logger.info("Test metrics: %s", {k: round(v, 4) if isinstance(v, float) else v for k, v in metrics.items()})
@@ -200,7 +256,8 @@ def train_model(df: pd.DataFrame) -> dict:
         "train_size": len(X_train),
         "val_size": len(X_val),
         "test_size": len(X_test),
-        "feature_cols": FEATURE_COLS,
+        "feature_cols": ENGINEERED_FEATURE_COLS,
+        "youden_threshold": youden_tau,
         "trained_at": datetime.now(timezone.utc).isoformat(),
     }
     meta_path.write_text(json.dumps(meta, indent=2, default=str))
@@ -236,19 +293,24 @@ def predict_single(features: dict[str, float]) -> dict:
     if model is None:
         raise RuntimeError("No trained model available. Train the model first.")
 
-    x = np.array([[features.get(col, 0.0) for col in FEATURE_COLS]], dtype=np.float32)
+    # Build a single-row DataFrame so engineer_features() can compute derived cols
+    row_df = pd.DataFrame([{col: features.get(col, 0.0) for col in FEATURE_COLS}])
+    row_eng = engineer_features(row_df)
+    x = row_eng[ENGINEERED_FEATURE_COLS].values.astype(np.float32)
     x_scaled = scaler.transform(x)
 
     prob = float(model.predict_proba(x_scaled)[0, 1])
-    settings = get_settings()
-    band = assign_risk_band(prob, settings.RISK_THRESHOLD)
 
-    # Read model version
+    # Use Youden threshold from metadata if available, else module default
     meta_path = SAVED_MODELS_DIR / "model_meta.json"
+    tau = YOUDEN_THRESHOLD
     model_version = "v1"
     if meta_path.exists():
         meta = json.loads(meta_path.read_text())
         model_version = meta.get("model_version", "v1")
+        tau = meta.get("youden_threshold", YOUDEN_THRESHOLD)
+
+    band = assign_risk_band(prob, tau)
 
     return {
         "risk_score": round(prob, 4),
@@ -273,15 +335,22 @@ def predict_batch(df: pd.DataFrame) -> pd.DataFrame:
     if model is None:
         raise RuntimeError("No trained model available. Train the model first.")
 
-    X = df[FEATURE_COLS].values.astype(np.float32)
+    df_eng = engineer_features(df[FEATURE_COLS])
+    X = df_eng[ENGINEERED_FEATURE_COLS].values.astype(np.float32)
     X_scaled = scaler.transform(X)
 
     probs = model.predict_proba(X_scaled)[:, 1]
-    settings = get_settings()
+
+    # Use Youden threshold from saved metadata
+    meta_path = SAVED_MODELS_DIR / "model_meta.json"
+    tau = YOUDEN_THRESHOLD
+    if meta_path.exists():
+        meta_json = json.loads(meta_path.read_text())
+        tau = meta_json.get("youden_threshold", YOUDEN_THRESHOLD)
 
     result = df.copy()
     result["risk_score"] = np.round(probs, 4)
-    result["risk_band"] = [assign_risk_band(p, settings.RISK_THRESHOLD) for p in probs]
+    result["risk_band"] = [assign_risk_band(p, tau) for p in probs]
 
     return result
 

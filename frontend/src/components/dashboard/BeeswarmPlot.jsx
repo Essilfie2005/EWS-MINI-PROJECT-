@@ -103,10 +103,12 @@ export default function BeeswarmPlot({ data, loading, error, onRetry }) {
 
   useEffect(() => {
     if (!canvasRef.current || !data?.length) return;
+    const el = canvasRef.current;
     const ro = new ResizeObserver(() => {
+      if (!canvasRef.current) return;
       setDims({ w: canvasRef.current.offsetWidth, h: canvasRef.current.offsetHeight });
     });
-    ro.observe(canvasRef.current);
+    ro.observe(el);
     return () => ro.disconnect();
   }, [data]);
 

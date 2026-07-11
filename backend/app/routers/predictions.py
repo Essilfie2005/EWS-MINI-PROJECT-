@@ -318,7 +318,7 @@ async def _run_shap_batch(student_ids: list[int]) -> None:
     Students are processed in chunks of 100 to avoid holding large result sets
     in memory.
     """
-    from app.database import AsyncSessionLocal  # avoid circular import at module level
+    from app.database import async_session_factory  # avoid circular import at module level
 
     BATCH_SIZE = 100
     total = len(student_ids)
@@ -327,7 +327,7 @@ async def _run_shap_batch(student_ids: list[int]) -> None:
     for batch_start in range(0, total, BATCH_SIZE):
         chunk_ids = student_ids[batch_start : batch_start + BATCH_SIZE]
 
-        async with AsyncSessionLocal() as db:
+        async with async_session_factory() as db:
             try:
                 result = await db.execute(
                     select(Student).where(Student.id.in_(chunk_ids))
