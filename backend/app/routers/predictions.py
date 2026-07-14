@@ -665,3 +665,134 @@ async def download_pdf_brief(student_id: int, db: AsyncSession = Depends(get_db)
         media_type=content_type,
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+# ── V3 Endpoints ─────────────────────────────────────────────────────────────
+
+@router.post("/train-ensemble")
+async def train_ensemble_endpoint(
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Train the V3 stacking ensemble (XGBoost + LightGBM + CatBoost → LogReg).
+    Runs in background — takes ~3-5 minutes. Returns immediately.
+    """
+    from app.services.ensemble_pipeline import train_ensemble
+    from app.utils.seed_data import get_training_dataframe
+
+    df = await get_training_dataframe()
+    if df is None or len(df) < 50:
+        raise HTTPException(status_code=400, detail="Not enough training data.")
+
+    def _run():
+        try:
+            report = train_ensemble(df)
+            logger.info("Ensemble training complete: AUC=%.4f", report["ensemble_metrics"]["auc"])
+        except Exception as exc:
+            logger.error("Ensemble training failed: %s", exc)
+
+    background_tasks.add_task(_run)
+    return {
+        "status": "started",
+        "message": "Ensemble training started in background (~3-5 min). Poll GET /api/dashboard/ensemble-metrics for results.",
+        "n_samples": len(df),
+        "base_learners": ["xgboost", "lightgbm", "catboost"],
+    }
+
+
+@router.post("/predict-ensemble")
+async def predict_with_ensemble(
+    payload: PredictionRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Predict using the V3 stacking ensemble. Falls back to XGBoost V2 if ensemble not trained.
+    Returns individual base learner probabilities + final meta-learner probability.
+    """
+    from app.services.ensemble_pipeline import predict_ensemble
+
+    result = await db.execute(select(Student).where(Student.id == payload.student_id))
+    student = result.scalars().first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    features = {col: float(getattr(student, col) or 0) for col in FEATURE_COLS}
+
+    try:
+        prediction = predict_ensemble(features)
+    except Exception as exc:
+        logger.error("Ensemble predict failed: %s", exc)
+        raise HTTPException(status_code=500, detail=f"Ensemble prediction failed: {exc}")
+
+    return {
+        "student_id": payload.student_id,
+        "anon_id":    student.anon_id,
+        **prediction,
+    }
+
+
+@router.get("/forecast/{student_id}")
+async def get_risk_forecast(
+    student_id: int,
+    weeks_ahead: int = 4,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Forecast a student's dropout risk for the next N weeks using Prophet time-series.
+    Returns historical trajectory + 4-week forecast + trend label (IMPROVING/WORSENING/STABLE).
+    """
+    from app.services.forecast_service import forecast_student_risk
+
+    result = await db.execute(select(Student).where(Student.id == student_id))
+    student = result.scalars().first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    # Load prediction history
+    pred_result = await db.execute(
+        select(Prediction)
+        .where(Prediction.student_id == student_id)
+        .order_by(Prediction.created_at.asc())
+    )
+    predictions = pred_result.scalars().all()
+    history = [
+        {"risk_score": float(p.risk_score), "created_at": p.created_at.isoformat()}
+        for p in predictions
+    ]
+
+    weeks_ahead = min(max(1, weeks_ahead), 8)  # clamp 1-8 weeks
+    forecast = forecast_student_risk(
+        student_id=student_id,
+        current_score=float(student.risk_score or 0.5),
+        prediction_history=history,
+        n_weeks_ahead=weeks_ahead,
+    )
+    return forecast
+
+
+@router.post("/feedback-retrain")
+async def trigger_feedback_retraining(
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Retrain ensemble using intervention outcome labels (active learning loop).
+    Students with SUCCESSFUL interventions have their labels revised.
+    """
+    from app.services.feedback_service import run_feedback_retraining
+    from app.utils.seed_data import get_training_dataframe
+
+    df = await get_training_dataframe()
+    if df is None or len(df) < 50:
+        raise HTTPException(status_code=400, detail="Not enough data.")
+
+    async def _run():
+        result = await run_feedback_retraining(db, df)
+        logger.info("Feedback retraining: %s", result.get("status"))
+
+    background_tasks.add_task(_run)
+    return {
+        "status": "started",
+        "message": "Feedback retraining started. Mark intervention outcomes as SUCCESSFUL/UNSUCCESSFUL first.",
+    }

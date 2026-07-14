@@ -1,0 +1,86 @@
+{
+  "trained_at": "2026-07-14T18:36:31.924999+00:00",
+  "n_samples": 2000,
+  "n_base_learners": 3,
+  "base_learner_names": [
+    "xgboost",
+    "lightgbm",
+    "catboost"
+  ],
+  "individual_metrics": {
+    "xgboost": {
+      "auc": 0.9952,
+      "f1": 0.9699,
+      "precision": 0.9932,
+      "recall": 0.9477,
+      "kappa": 0.952,
+      "brier": 0.0193,
+      "log_loss": 0.0862,
+      "tp": 145,
+      "fp": 1,
+      "tn": 246,
+      "fn": 8,
+      "sensitivity": 0.9477,
+      "specificity": 0.996
+    },
+    "lightgbm": {
+      "auc": 0.995,
+      "f1": 0.9699,
+      "precision": 0.9932,
+      "recall": 0.9477,
+      "kappa": 0.952,
+      "brier": 0.0194,
+      "log_loss": 0.0917,
+      "tp": 145,
+      "fp": 1,
+      "tn": 246,
+      "fn": 8,
+      "sensitivity": 0.9477,
+      "specificity": 0.996
+    },
+    "catboost": {
+      "auc": 0.9957,
+      "f1": 0.9667,
+      "precision": 0.9864,
+      "recall": 0.9477,
+      "kappa": 0.9467,
+      "brier": 0.0203,
+      "log_loss": 0.0848,
+      "tp": 145,
+      "fp": 2,
+      "tn": 245,
+      "fn": 8,
+      "sensitivity": 0.9477,
+      "specificity": 0.9919
+    }
+  },
+  "ensemble_metrics": {
+    "auc": 0.9955,
+    "f1": 0.9699,
+    "precision": 0.9932,
+    "recall": 0.9477,
+    "kappa": 0.952,
+    "brier": 0.0204,
+    "log_loss": 0.0932,
+    "tp": 145,
+    "fp": 1,
+    "tn": 246,
+    "fn": 8,
+    "sensitivity": 0.9477,
+    "specificity": 0.996
+  },
+  "v2_baseline_metrics": {
+    "auc": 0.9958,
+    "f1": 0.9201,
+    "precision": 0.9061,
+    "kappa": 0.8247
+  },
+  "improvement_over_v2_pct": {
+    "auc": -0.03,
+    "f1": 5.41,
+    "precision": 9.61,
+    "kappa": 15.44
+  },
+  "threshold": 0.4432,
+  "fold_strategy": "5-fold stratified OOF stacking"
+}

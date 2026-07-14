@@ -504,3 +504,106 @@ async def run_drift_check(db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=400, detail="No predictions available. Run batch prediction first.")
 
     return check_drift(scores)
+
+
+# ── V3 Endpoints ─────────────────────────────────────────────────────────────
+
+@router.get("/ensemble-metrics")
+async def get_ensemble_metrics():
+    """Return stacking ensemble training metrics vs V2 XGBoost baseline."""
+    from app.services.ensemble_pipeline import get_ensemble_metrics
+    metrics = get_ensemble_metrics()
+    if not metrics:
+        raise HTTPException(
+            status_code=404,
+            detail="Ensemble not yet trained. POST /api/predictions/train-ensemble first."
+        )
+    return metrics
+
+
+@router.get("/cv-report")
+async def get_cv_report_endpoint():
+    """Return 5-fold stratified cross-validation report with confidence intervals."""
+    from app.services.cv_pdp_service import get_cv_report
+    report = get_cv_report()
+    if not report:
+        raise HTTPException(
+            status_code=404,
+            detail="CV report not yet computed. POST /api/dashboard/compute-cv first."
+        )
+    return report
+
+
+@router.post("/compute-cv")
+async def compute_cv_endpoint(db: AsyncSession = Depends(get_db)):
+    """Run 5-fold CV on current dataset and save results (takes ~60s)."""
+    from app.services.cv_pdp_service import compute_cv_report
+    from app.utils.seed_data import get_training_dataframe
+    df = await get_training_dataframe()
+    if df is None or len(df) < 50:
+        raise HTTPException(status_code=400, detail="Not enough data for CV. Need at least 50 students.")
+    import asyncio
+    loop = asyncio.get_event_loop()
+    report = await loop.run_in_executor(None, compute_cv_report, df)
+    return report
+
+
+@router.get("/pdp")
+async def get_pdp_endpoint():
+    """Return Partial Dependence Plot data for each feature."""
+    from app.services.cv_pdp_service import get_pdp_report
+    report = get_pdp_report()
+    if not report:
+        raise HTTPException(
+            status_code=404,
+            detail="PDP not yet computed. POST /api/dashboard/compute-pdp first."
+        )
+    return report
+
+
+@router.post("/compute-pdp")
+async def compute_pdp_endpoint(db: AsyncSession = Depends(get_db)):
+    """Compute Partial Dependence Plots for all features (takes ~30s)."""
+    from app.services.cv_pdp_service import compute_pdp
+    from app.utils.seed_data import get_training_dataframe
+    df = await get_training_dataframe()
+    if df is None or len(df) < 50:
+        raise HTTPException(status_code=400, detail="Not enough data.")
+    import asyncio
+    loop = asyncio.get_event_loop()
+    report = await loop.run_in_executor(None, compute_pdp, df)
+    return report
+
+
+@router.get("/learning-curve")
+async def get_learning_curve_endpoint():
+    """Return learning curve: model performance vs training data size."""
+    from app.services.cv_pdp_service import get_learning_curve
+    report = get_learning_curve()
+    if not report:
+        raise HTTPException(
+            status_code=404,
+            detail="Learning curve not yet computed. POST /api/dashboard/compute-learning-curve first."
+        )
+    return report
+
+
+@router.post("/compute-learning-curve")
+async def compute_learning_curve_endpoint(db: AsyncSession = Depends(get_db)):
+    """Compute learning curve (takes ~2min)."""
+    from app.services.cv_pdp_service import compute_learning_curve
+    from app.utils.seed_data import get_training_dataframe
+    df = await get_training_dataframe()
+    if df is None or len(df) < 50:
+        raise HTTPException(status_code=400, detail="Not enough data.")
+    import asyncio
+    loop = asyncio.get_event_loop()
+    report = await loop.run_in_executor(None, compute_learning_curve, df)
+    return report
+
+
+@router.get("/feedback-summary")
+async def get_feedback_summary_endpoint():
+    """Return intervention outcome feedback retraining history."""
+    from app.services.feedback_service import get_feedback_summary
+    return get_feedback_summary()
