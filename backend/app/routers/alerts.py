@@ -210,11 +210,10 @@ async def send_sms_alert(
     # Record alert in DB
     db_alert = Alert(
         student_id=payload.student_id,
+        anon_id=student.anon_id,
         alert_type="SMS_COUNSELLOR",
         message=message,
-        severity=risk_band,
         is_read=False,
-        is_dismissed=False,
     )
     db.add(db_alert)
     await db.flush()
