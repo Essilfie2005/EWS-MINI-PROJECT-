@@ -1,0 +1,10 @@
+{
+  "ks_complement": 0.9814,
+  "correlation_similarity": 0.9838,
+  "ks_threshold": 0.8,
+  "corr_threshold": 0.75,
+  "ks_pass": true,
+  "corr_pass": true,
+  "n_real": 2000,
+  "n_synthetic": 500
+}

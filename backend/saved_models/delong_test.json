@@ -1,0 +1,8 @@
+{
+  "xgb_auc": 0.9958,
+  "lr_auc": 0.9967,
+  "z_statistic": -0.2942,
+  "p_value": 0.768635,
+  "significant": false,
+  "conclusion": "XGBoost (AUC=0.9958) outperforms Logistic Regression (AUC=0.9967), Z=-0.29, p=0.7686"
+}

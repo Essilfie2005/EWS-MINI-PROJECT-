@@ -1,9 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   ClipboardPlus,
   AlertTriangle,
+  Download,
+  TrendingUp,
+  TrendingDown,
 } from 'lucide-react';
 import {
   BarChart,
@@ -15,8 +18,10 @@ import {
   ResponsiveContainer,
   Cell,
   ReferenceLine,
+  LineChart,
+  Line,
 } from 'recharts';
-import { fetchStudentDetail, createIntervention, updateIntervention, triggerSinglePrediction, fetchPredictionHistory, fetchStudentInterventions } from '../services/api';
+import { fetchStudentDetail, createIntervention, updateIntervention, triggerSinglePrediction, fetchPredictionHistory, fetchStudentInterventions, fetchRiskTrajectory, downloadPdfBrief } from '../services/api';
 import { SkeletonCard, SkeletonChart } from '../components/shared/Skeleton';
 import ErrorState from '../components/shared/ErrorState';
 import { useToast } from '../context/ToastContext';
@@ -181,6 +186,14 @@ export default function StudentDetailPage() {
 
   const [generatingShap, setGeneratingShap] = useState(false);
 
+  // Risk trajectory
+  const [trajectory, setTrajectory] = useState(null);
+  const [trajectoryLoading, setTrajectoryLoading] = useState(false);
+  const [trajectoryUnavailable, setTrajectoryUnavailable] = useState(false);
+
+  // PDF export
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
   const handleGenerateShap = async () => {
     setGeneratingShap(true);
     try {
@@ -225,6 +238,42 @@ export default function StudentDetailPage() {
   useEffect(() => {
     loadStudent();
   }, [loadStudent]);
+
+  // Load risk trajectory independently (soft failure)
+  useEffect(() => {
+    if (!id) return;
+    setTrajectoryLoading(true);
+    setTrajectoryUnavailable(false);
+    fetchRiskTrajectory(id)
+      .then((res) => {
+        const pts = Array.isArray(res.data) ? res.data : res.data?.points;
+        setTrajectory(pts || null);
+      })
+      .catch(() => {
+        setTrajectoryUnavailable(true);
+      })
+      .finally(() => setTrajectoryLoading(false));
+  }, [id]);
+
+  const handleDownloadPdf = async () => {
+    setDownloadingPdf(true);
+    try {
+      const res = await downloadPdfBrief(id);
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `risk_brief_${id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      addToast('PDF downloaded successfully', 'success');
+    } catch (err) {
+      addToast('PDF export not yet available', 'warning');
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
 
 
 
@@ -301,6 +350,14 @@ export default function StudentDetailPage() {
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="btn btn-secondary btn-sm" onClick={() => setShowModal(true)}>
             <ClipboardPlus size={14} /> Log Intervention
+          </button>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={handleDownloadPdf}
+            disabled={downloadingPdf}
+            title="Download Risk Brief PDF"
+          >
+            <Download size={14} /> {downloadingPdf ? 'Downloading...' : 'Download Risk Brief'}
           </button>
           {(student?.risk_band === 'high' || student?.risk_band === 'critical') && (
             <SmsAlertTrigger
@@ -380,6 +437,76 @@ export default function StudentDetailPage() {
 
         {/* Right Column */}
         <div className="right-col">
+          {/* Risk Trajectory Chart */}
+          {!trajectoryUnavailable && (
+            <div className="glass-card slide-up" style={{ marginBottom: 0 }}>
+              <div className="section-header" style={{ marginBottom: 16 }}>
+                <div>
+                  <h3 className="section-title">Risk Score Trajectory</h3>
+                  <p className="section-subtitle">Weekly dropout risk progression</p>
+                </div>
+                {trajectory && trajectory.length >= 2 && (() => {
+                  const trending = trajectory[trajectory.length - 1].risk > trajectory[0].risk;
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: trending ? '#f43f5e' : '#10b981' }}>
+                      {trending ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                      {trending ? 'Trending Up' : 'Trending Down'}
+                    </div>
+                  );
+                })()}
+              </div>
+              {trajectoryLoading ? (
+                <div style={{ height: 200, borderRadius: 8, background: 'rgba(255,255,255,0.03)', animation: 'pulse 1.5s infinite' }} />
+              ) : trajectory?.length ? (() => {
+                const trending = trajectory.length >= 2 && trajectory[trajectory.length - 1].risk > trajectory[0].risk;
+                const lineColor = trending ? '#f43f5e' : '#10b981';
+                return (
+                  <ResponsiveContainer width="100%" height={200}>
+                    <LineChart data={trajectory} margin={{ top: 10, right: 20, left: 0, bottom: 10 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                      <XAxis
+                        dataKey="week"
+                        tick={{ fontSize: 12, fill: '#64748b' }}
+                        axisLine={{ stroke: 'rgba(255,255,255,0.06)' }}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        domain={[0, 1]}
+                        tickFormatter={(v) => `${Math.round(v * 100)}%`}
+                        tick={{ fontSize: 12, fill: '#64748b' }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        formatter={(v) => [`${(v * 100).toFixed(1)}%`, 'Risk Score']}
+                        contentStyle={{
+                          background: 'rgba(19,27,46,0.95)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: 8,
+                          fontSize: 13,
+                        }}
+                      />
+                      <ReferenceLine y={0.5} stroke="rgba(245,158,11,0.6)" strokeDasharray="4 4" label={{ value: 'Risk Threshold', position: 'insideTopRight', fontSize: 11, fill: '#f59e0b' }} />
+                      <Line
+                        type="monotone"
+                        dataKey="risk"
+                        stroke={lineColor}
+                        strokeWidth={2.5}
+                        dot={{ fill: lineColor, r: 4, strokeWidth: 0 }}
+                        activeDot={{ r: 6 }}
+                        animationDuration={800}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                );
+              })() : (
+                <div style={{ color: 'var(--text-dim)', fontSize: 13, padding: '32px 0', textAlign: 'center' }}>
+                  No trajectory data for this student
+                </div>
+              )}
+            </div>
+          )}
+
           {/* SHAP Waterfall Chart */}
           <div className="glass-card slide-up stagger-1">
             <div className="section-header">

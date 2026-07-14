@@ -378,3 +378,48 @@ async def get_feature_importance():
     sorted_importance = dict(sorted(named_importance.items(), key=lambda x: x[1], reverse=True))
 
     return {"feature_importance": sorted_importance}
+
+
+# ── V2 Analytics endpoints ─────────────────────────────────────────────────
+
+def _load_analytics_file(filename: str) -> dict:
+    """Load a pre-computed analytics JSON file from saved_models."""
+    import json
+    from app.config import SAVED_MODELS_DIR
+    path = SAVED_MODELS_DIR / filename
+    if not path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Analytics file '{filename}' not found. Run compute_analytics.py first."
+        )
+    return json.loads(path.read_text())
+
+
+@router.get("/confusion-matrix")
+async def get_confusion_matrix():
+    """Return TP/FP/TN/FN confusion matrix at Youden's J threshold."""
+    return _load_analytics_file("confusion_matrix.json")
+
+
+@router.get("/calibration-curve")
+async def get_calibration_curve():
+    """Return model calibration curve data (reliability diagram)."""
+    return _load_analytics_file("calibration_curve.json")
+
+
+@router.get("/fairness")
+async def get_fairness_report():
+    """Return fairness analysis broken down by financial aid band."""
+    return _load_analytics_file("fairness_report.json")
+
+
+@router.get("/ctgan-quality")
+async def get_ctgan_quality():
+    """Return CTGAN synthetic data quality report (KSComplement, CorrelationSimilarity)."""
+    return _load_analytics_file("ctgan_quality.json")
+
+
+@router.get("/delong-test")
+async def get_delong_test():
+    """Return DeLong's test results: XGBoost vs Logistic Regression AUC comparison."""
+    return _load_analytics_file("delong_test.json")

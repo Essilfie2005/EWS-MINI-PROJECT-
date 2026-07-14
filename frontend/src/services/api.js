@@ -79,13 +79,25 @@ export const fetchStudentInterventions = (studentId) => api.get(`/interventions/
 export const fetchAlerts = (params) => api.get('/alerts/', { params });
 export const markAlertRead = (id) => api.patch(`/alerts/${id}/read`);
 export const markAllAlertsRead = () => api.post('/alerts/mark-all-read');
-export const sendSmsAlert = (payload) => api.post('/alerts/send', payload);
+export const sendSmsAlert = (payload) => api.post('/alerts/send-sms', payload);
 export const triggerBatchAlerts = () => api.post('/alerts/trigger-batch');
 
 // ──── Analytics ──────────────────────────────────────────────────────
 export const fetchRocCurve = () => api.get('/dashboard/roc-curve');
 export const fetchBeeswarmData = () => api.get('/dashboard/beeswarm');
 export const fetchPilotMetrics = () => api.get('/dashboard/pilot-metrics');
+export const fetchConfusionMatrix = () => api.get('/dashboard/confusion-matrix');
+export const fetchCalibrationCurve = () => api.get('/dashboard/calibration-curve');
+export const fetchFairnessData = () => api.get('/dashboard/fairness');
+export const fetchCtganQuality = () => api.get('/dashboard/ctgan-quality');
+export const fetchDelongTest = () => api.get('/dashboard/delong-test');
+
+// ──── Predictions (v2) ───────────────────────────────────────────────
+export const fetchRiskTrajectory = (studentId) => api.get(`/predictions/trajectory/${studentId}`);
+export const downloadPdfBrief = (studentId) =>
+  api.get(`/predictions/pdf/${studentId}`, { responseType: 'blob' });
+export const fetchCountAtThreshold = (tau) =>
+  api.get('/predictions/count-at-threshold', { params: { tau } });
 
 // ──── Data Management ───────────────────────────
 export const uploadCSV = (formData) =>

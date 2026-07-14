@@ -3,6 +3,7 @@ import {
   Sliders,
   Database,
   Upload,
+  Download,
   RefreshCw,
   Save,
   Loader2,
@@ -11,7 +12,7 @@ import {
   PlayCircle,
   Brain,
 } from 'lucide-react';
-import { fetchSettings, updateSettings, uploadCSV, factoryReset, generateShapBatch } from '../services/api';
+import { fetchSettings, updateSettings, uploadCSV, factoryReset, generateShapBatch, fetchCountAtThreshold } from '../services/api';
 import api from '../services/api';
 import { useToast } from '../context/ToastContext';
 
@@ -31,6 +32,13 @@ export default function SettingsPage() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [predicting, setPredicting] = useState(false);
   const [shapBatch, setShapBatch] = useState(false);
+
+  // Threshold sensitivity slider
+  const [thresholdSlider, setThresholdSlider] = useState(0.5);
+  const [thresholdCount, setThresholdCount] = useState(null);
+  const [thresholdTotal, setThresholdTotal] = useState(null);
+  const [thresholdLoading, setThresholdLoading] = useState(false);
+  const thresholdTimerRef = useRef(null);
 
   const handleFactoryReset = async () => {
     setResetting(true);
@@ -65,6 +73,25 @@ export default function SettingsPage() {
   useEffect(() => {
     loadSettings();
   }, [loadSettings]);
+
+  // Debounced threshold count fetch
+  const handleThresholdSlider = (val) => {
+    setThresholdSlider(val);
+    if (thresholdTimerRef.current) clearTimeout(thresholdTimerRef.current);
+    thresholdTimerRef.current = setTimeout(async () => {
+      setThresholdLoading(true);
+      try {
+        const res = await fetchCountAtThreshold(val);
+        setThresholdCount(res.data?.count ?? res.data?.flagged ?? null);
+        setThresholdTotal(res.data?.total ?? null);
+      } catch {
+        setThresholdCount(null);
+        setThresholdTotal(null);
+      } finally {
+        setThresholdLoading(false);
+      }
+    }, 300);
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -208,6 +235,70 @@ export default function SettingsPage() {
 
       </div>
 
+      {/* Threshold Sensitivity Slider */}
+      <div className="glass-card slide-up stagger-2 settings-section">
+        <h3 className="settings-section-title">
+          <Sliders size={18} /> Threshold Sensitivity Analysis
+        </h3>
+        <div className="settings-row">
+          <div className="settings-row-info">
+            <span className="settings-row-label">Sensitivity Threshold (τ)</span>
+            <span className="settings-row-desc">
+              Drag to preview how many students would be flagged at a given threshold.
+              The marker at <strong>0.44</strong> is the Youden's J optimal value.
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 220 }}>
+            <div style={{ position: 'relative', paddingBottom: 4 }}>
+              <input
+                type="range"
+                className="range-slider"
+                min="0.1"
+                max="0.9"
+                step="0.01"
+                value={thresholdSlider}
+                onChange={(e) => handleThresholdSlider(parseFloat(e.target.value))}
+                style={{ width: '100%' }}
+              />
+              {/* Youden's J marker */}
+              <div style={{
+                position: 'absolute',
+                left: `${((0.4432 - 0.1) / 0.8) * 100}%`,
+                top: -2,
+                width: 2,
+                height: 20,
+                background: '#f59e0b',
+                borderRadius: 1,
+                transform: 'translateX(-50%)',
+                pointerEvents: 'none',
+              }} title="Youden's J optimal" />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-dim)' }}>
+              <span>0.1</span>
+              <span style={{ color: '#f59e0b', fontWeight: 600 }}>J=0.44</span>
+              <span>0.9</span>
+            </div>
+            <div style={{ textAlign: 'center', padding: '10px 14px', background: 'rgba(99,102,241,0.08)', borderRadius: 8, border: '1px solid rgba(99,102,241,0.2)' }}>
+              <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--accent)', lineHeight: 1 }}>
+                τ = {thresholdSlider.toFixed(2)}
+              </div>
+              {thresholdLoading ? (
+                <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 6 }}>Calculating…</div>
+              ) : thresholdCount !== null ? (
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6 }}>
+                  <strong style={{ color: 'var(--text-primary)' }}>{thresholdCount}</strong> students flagged
+                  {thresholdTotal ? (
+                    <> ({((thresholdCount / thresholdTotal) * 100).toFixed(1)}% of cohort)</>  
+                  ) : null}
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 6 }}>Connect backend to see count</div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Data Management */}
       <div className="glass-card slide-up stagger-3 settings-section">
         <h3 className="settings-section-title">
@@ -243,6 +334,24 @@ export default function SettingsPage() {
               ) : (
                 <><Upload size={14} /> Upload File</>
               )}
+            </button>
+            <button
+              className="btn btn-secondary btn-sm"
+              style={{ fontSize: 12 }}
+              onClick={() => {
+                const csv = 'student_id,attendance_rate,quiz_average,assignment_submission_rate,mobile_engagement_freq,financial_aid_status\n';
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'ews_upload_template.csv';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+              }}
+            >
+              <Download size={14} /> Download CSV Template
             </button>
           </div>
         </div>

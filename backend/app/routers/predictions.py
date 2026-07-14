@@ -431,3 +431,237 @@ async def generate_shap_batch(
 
     logger.info("generate-shap-batch: queued %d students for SHAP computation", len(student_ids))
     return {"status": "started", "total": len(student_ids)}
+
+
+# ── V2 endpoints ────────────────────────────────────────────────────────────
+
+@router.get("/trajectory/{student_id}")
+async def get_risk_trajectory(student_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Return weekly risk score history for a student.
+    If multiple predictions exist, returns them ordered by created_at.
+    Fills in synthetic earlier weeks based on current score trend.
+    """
+    result = await db.execute(
+        select(Student).where(Student.id == student_id)
+    )
+    student = result.scalars().first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    # Load prediction history ordered by time
+    pred_result = await db.execute(
+        select(Prediction)
+        .where(Prediction.student_id == student_id)
+        .order_by(Prediction.created_at.asc())
+    )
+    predictions = pred_result.scalars().all()
+
+    current_score = float(student.risk_score or 0.5)
+
+    if predictions and len(predictions) >= 2:
+        # Use real history
+        trajectory = [
+            {
+                "week": f"Wk {i+1}",
+                "risk_score": round(float(p.risk_score), 4),
+                "real": True,
+            }
+            for i, p in enumerate(predictions[-8:])  # last 8 readings
+        ]
+    else:
+        # Synthesise a plausible 6-week trajectory ending at current score
+        import random
+        import math
+        random.seed(student_id)
+        weeks = 6
+        # Start higher if high risk (student was deteriorating), lower if safe
+        start_offset = random.uniform(0.05, 0.20)
+        if current_score > 0.5:
+            start = max(0.1, current_score - start_offset)
+        else:
+            start = min(0.9, current_score + start_offset)
+        trajectory = []
+        for w in range(weeks):
+            t = w / (weeks - 1)
+            # Ease from start to current
+            score = start + (current_score - start) * (t ** 1.5)
+            # Small noise
+            score += random.uniform(-0.02, 0.02)
+            score = round(max(0.0, min(1.0, score)), 4)
+            trajectory.append({"week": f"Wk {w+1}", "risk_score": score, "real": False})
+
+    return {
+        "student_id": student_id,
+        "current_risk_score": current_score,
+        "trajectory": trajectory,
+        "youden_threshold": 0.4432,
+    }
+
+
+@router.get("/count-at-threshold")
+async def count_students_at_threshold(
+    tau: float = 0.5,
+    db: AsyncSession = Depends(get_db),
+):
+    """Count how many students would be flagged at a given threshold tau."""
+    if not (0.0 <= tau <= 1.0):
+        raise HTTPException(status_code=422, detail="tau must be between 0 and 1")
+
+    result = await db.execute(
+        select(func.count(Student.id)).where(Student.risk_score.isnot(None))
+    )
+    total = result.scalar() or 0
+
+    flagged_result = await db.execute(
+        select(func.count(Student.id)).where(
+            Student.risk_score.isnot(None),
+            Student.risk_score >= tau,
+        )
+    )
+    flagged = flagged_result.scalar() or 0
+
+    return {
+        "tau": round(tau, 4),
+        "flagged": int(flagged),
+        "total": int(total),
+        "pct_flagged": round(flagged / total * 100, 1) if total > 0 else 0.0,
+        "youden_tau": 0.4432,
+    }
+
+
+@router.get("/pdf/{student_id}")
+async def download_pdf_brief(student_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Generate and return a PDF risk brief for a single student.
+    Returns a binary PDF with student risk score, top SHAP factors, and recommended actions.
+    """
+    from fastapi.responses import StreamingResponse
+    import io
+
+    result = await db.execute(select(Student).where(Student.id == student_id))
+    student = result.scalars().first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    features = {col: getattr(student, col) for col in FEATURE_COLS}
+    risk_score = float(student.risk_score or 0.0)
+    risk_band = student.risk_band or "UNKNOWN"
+
+    # Get SHAP values for top factors
+    try:
+        shap_result = shap_service.compute_shap_values(features)
+        shap_items = sorted(shap_result["shap_values"], key=lambda x: abs(x["contribution"]), reverse=True)
+        top3 = shap_items[:3]
+    except Exception:
+        top3 = []
+
+    # Build PDF using reportlab (fallback to plain text if not installed)
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import cm
+        from reportlab.lib import colors
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT
+
+        buf = io.BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=A4, topMargin=2*cm, bottomMargin=2*cm,
+                                leftMargin=2*cm, rightMargin=2*cm)
+        styles = getSampleStyleSheet()
+        story = []
+
+        # Title
+        title_style = ParagraphStyle("title", parent=styles["Title"], fontSize=18, spaceAfter=6, alignment=TA_CENTER)
+        story.append(Paragraph("EWS — Student Risk Brief", title_style))
+        story.append(Paragraph("Confidential — For Counsellor Use Only", styles["Normal"]))
+        story.append(Spacer(1, 0.5*cm))
+
+        # Risk band colour
+        band_color = {"CRITICAL": colors.red, "HIGH": colors.orangered,
+                      "MEDIUM": colors.orange, "LOW": colors.green}.get(risk_band, colors.gray)
+
+        # Summary table
+        data = [
+            ["Student ID", f"#{student_id}  (Anon: {student.anon_id or 'N/A'})"],
+            ["Risk Score", f"{risk_score:.2%}"],
+            ["Risk Band", risk_band],
+            ["Attendance", f"{float(student.attendance_rate or 0):.1f}%"],
+            ["Quiz Average", f"{float(student.quiz_average or 0):.1f}%"],
+            ["Assignment Submission", f"{float(student.assignment_submission_rate or 0):.1f}%"],
+        ]
+        tbl = Table(data, colWidths=[6*cm, 10*cm])
+        tbl.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0a0f1e")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("BACKGROUND", (1, 2), (1, 2), band_color),
+            ("TEXTCOLOR", (1, 2), (1, 2), colors.white),
+            ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+            ("FONTSIZE", (0, 0), (-1, -1), 11),
+            ("ROWBACKGROUNDS", (0, 0), (-1, -1), [colors.HexColor("#f8fafc"), colors.white]),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
+            ("PADDING", (0, 0), (-1, -1), 8),
+        ]))
+        story.append(tbl)
+        story.append(Spacer(1, 0.5*cm))
+
+        # Top risk factors
+        story.append(Paragraph("Top Risk Factors (SHAP Analysis)", styles["Heading2"]))
+        if top3:
+            for item in top3:
+                direction = "increases" if item["contribution"] > 0 else "decreases"
+                arrow = "+" if item["contribution"] > 0 else ""
+                story.append(Paragraph(
+                    f"• <b>{item['feature']}</b> = {item['value']:.1f} "
+                    f"(SHAP: {arrow}{item['contribution']:.4f} — {direction} dropout risk)",
+                    styles["Normal"]
+                ))
+        else:
+            story.append(Paragraph("SHAP data not yet computed for this student.", styles["Normal"]))
+
+        story.append(Spacer(1, 0.4*cm))
+
+        # Recommended actions
+        story.append(Paragraph("Recommended Actions", styles["Heading2"]))
+        actions = []
+        if float(student.attendance_rate or 100) < 60:
+            actions.append("Schedule an attendance review meeting within 3 days.")
+        if float(student.quiz_average or 100) < 40:
+            actions.append("Refer to academic support / peer tutoring programme.")
+        if float(student.financial_aid_status or 10) < 4:
+            actions.append("Review financial aid eligibility — student may qualify for bursary.")
+        if not actions:
+            actions.append("Monitor student progress weekly. No urgent intervention required.")
+        for a in actions:
+            story.append(Paragraph(f"• {a}", styles["Normal"]))
+
+        story.append(Spacer(1, 0.5*cm))
+        story.append(Paragraph(
+            "Generated by the EWS (Early Warning System) — Ghanaian University Foundation Programme. "
+            "This document is anonymised and must not be shared outside the counselling team.",
+            styles["Italic"]
+        ))
+
+        doc.build(story)
+        buf.seek(0)
+        content_type = "application/pdf"
+        filename = f"risk_brief_{student_id}.pdf"
+
+    except ImportError:
+        # Fallback: plain text if reportlab not available
+        text = (
+            f"EWS Risk Brief — Student #{student_id}\n"
+            f"Risk Score: {risk_score:.2%}\n"
+            f"Risk Band: {risk_band}\n\n"
+            + "\n".join(f"{item['feature']}: {item['contribution']:+.4f}" for item in top3)
+            + "\n\nInstall reportlab for PDF output: pip install reportlab"
+        )
+        buf = io.BytesIO(text.encode())
+        content_type = "text/plain"
+        filename = f"risk_brief_{student_id}.txt"
+
+    return StreamingResponse(
+        buf,
+        media_type=content_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

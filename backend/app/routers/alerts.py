@@ -151,3 +151,83 @@ async def get_alerts_for_student(
         unread_count=unread,
         alerts=[AlertResponse.model_validate(a) for a in alerts],
     )
+
+
+# ── V2: Africa's Talking SMS alert endpoint ────────────────────────────────
+
+from pydantic import BaseModel as _BaseModel
+
+class SmsAlertRequest(_BaseModel):
+    student_id: int
+    phone_numbers: list[str]          # E.164 format e.g. ["+233241234567"]
+    custom_message: str | None = None  # override auto-generated message
+
+
+@router.post("/send-sms")
+async def send_sms_alert(
+    payload: SmsAlertRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Send an SMS counsellor alert for a flagged student via Africa's Talking.
+    Falls back to console logging if AT_API_KEY is not set (sandbox/demo mode).
+    """
+    from app.services.sms_service import send_sms, build_counsellor_alert
+    from app.services import shap_service
+
+    # Load student
+    result = await db.execute(select(Student).where(Student.id == payload.student_id))
+    student = result.scalars().first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    risk_band = student.risk_band or "UNKNOWN"
+    student_code = student.anon_id or f"#{payload.student_id}"
+
+    # Build message
+    if payload.custom_message:
+        message = payload.custom_message
+    else:
+        features = {
+            "attendance_rate": float(student.attendance_rate or 0),
+            "quiz_average": float(student.quiz_average or 0),
+            "assignment_submission_rate": float(student.assignment_submission_rate or 0),
+            "mobile_engagement_freq": float(student.mobile_engagement_freq or 0),
+            "financial_aid_status": float(student.financial_aid_status or 5),
+        }
+        try:
+            top_factors = shap_service.get_top_risk_factors(features, top_n=2)
+        except Exception:
+            top_factors = [
+                f"Attendance {float(student.attendance_rate or 0):.0f}%",
+                f"Quiz avg {float(student.quiz_average or 0):.0f}%",
+            ]
+        message = build_counsellor_alert(student_code, risk_band, top_factors)
+
+    # Send via Africa's Talking (or log if key not set)
+    sms_result = send_sms(payload.phone_numbers, message)
+
+    # Record alert in DB
+    db_alert = Alert(
+        student_id=payload.student_id,
+        alert_type="SMS_COUNSELLOR",
+        message=message,
+        severity=risk_band,
+        is_read=False,
+        is_dismissed=False,
+    )
+    db.add(db_alert)
+    await db.flush()
+
+    logger.info(
+        "SMS alert for student %s (%s): status=%s",
+        student_code, risk_band, sms_result.get("status")
+    )
+
+    return {
+        "alert_id": db_alert.id,
+        "student_code": student_code,
+        "risk_band": risk_band,
+        "message": message,
+        "sms_result": sms_result,
+    }
