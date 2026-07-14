@@ -72,6 +72,51 @@
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 }
 
+/* ---------- Light Mode Theme ---------- */
+[data-theme="light"] {
+  --bg-deep: #eef2ff;
+  --bg-surface: #f8faff;
+  --bg-elevated: #ffffff;
+  --bg-card: rgba(255, 255, 255, 0.85);
+  --bg-card-hover: rgba(255, 255, 255, 0.95);
+  --bg-card-border: rgba(99, 102, 241, 0.15);
+
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(99, 102, 241, 0.2);
+
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-dim: #94a3b8;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.10);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] body {
+  background: var(--bg-deep);
+  color: var(--text-primary);
+}
+
+[data-theme="light"] .sidebar {
+  background: linear-gradient(180deg, #4f46e5 0%, #7c3aed 100%);
+}
+
+[data-theme="light"] .header {
+  background: rgba(255, 255, 255, 0.90);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.15);
+  backdrop-filter: blur(20px);
+}
+
+[data-theme="light"] .card,
+[data-theme="light"] .glass-card {
+  background: var(--bg-card);
+  border-color: var(--bg-card-border);
+  box-shadow: var(--shadow-md);
+}
+
 /* ---------- Reset & Base ---------- */
 *,
 *::before,

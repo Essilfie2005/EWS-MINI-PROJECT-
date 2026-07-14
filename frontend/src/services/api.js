@@ -91,6 +91,9 @@ export const fetchCalibrationCurve = () => api.get('/dashboard/calibration-curve
 export const fetchFairnessData = () => api.get('/dashboard/fairness');
 export const fetchCtganQuality = () => api.get('/dashboard/ctgan-quality');
 export const fetchDelongTest = () => api.get('/dashboard/delong-test');
+export const fetchCohortComparison = () => api.get('/dashboard/cohort-comparison');
+export const fetchDriftStatus = () => api.get('/dashboard/drift');
+export const triggerDriftCheck = () => api.post('/dashboard/drift/check');
 
 // ──── Predictions (v2) ───────────────────────────────────────────────
 export const fetchRiskTrajectory = (studentId) => api.get(`/predictions/trajectory/${studentId}`);

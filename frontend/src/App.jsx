@@ -7,11 +7,13 @@ import InterventionsPage from './pages/InterventionsPage.jsx';
 import AnalyticsPage from './pages/AnalyticsPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import WelcomeTutorial from './components/shared/WelcomeTutorial.jsx';
+import DemoModeToggle from './components/DemoModeToggle.jsx';
 
 function App({ onLogout }) {
   return (
     <>
       <WelcomeTutorial />
+      <DemoModeToggle />
       <Routes>
         <Route path="/" element={<Layout onLogout={onLogout} />}>
           <Route index element={<DashboardPage />} />
