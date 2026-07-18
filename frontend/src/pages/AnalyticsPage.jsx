@@ -11,6 +11,7 @@ import {
   fetchFairnessData,
   fetchCtganQuality,
 } from '../services/api';
+import api from '../services/api';
 import RocCurve from '../components/dashboard/RocCurve';
 import BeeswarmPlot from '../components/dashboard/BeeswarmPlot';
 import ConversionRate from '../components/dashboard/ConversionRate';
@@ -251,7 +252,8 @@ export default function AnalyticsPage() {
   const isLoading = roc.loading || beeswarm.loading || pilot.loading;
 
   return (
-    <div className="fade-in">
+    <>
+      <div className="fade-in">
 
       {apiDown && (
         <div style={{
@@ -531,6 +533,221 @@ export default function AnalyticsPage() {
           )}
         </div>
       )}
-    </div>
+      </div>
+
+      {/* V3 Panels */}
+      <V3AnalyticsPanels />
+    </>
+  );
+}
+
+// ── V3 Panels (separate component to keep file manageable) ──────────────────
+function V3AnalyticsPanels() {
+  const { data: ensembleData } = useApi(() => api.get('/dashboard/ensemble-metrics').then(r => r.data), []);
+  const { data: cvData }       = useApi(() => api.get('/dashboard/cv-report').then(r => r.data), []);
+  const { data: pdpData }      = useApi(() => api.get('/dashboard/pdp').then(r => r.data), []);
+  const { data: lcData }       = useApi(() => api.get('/dashboard/learning-curve').then(r => r.data), []);
+
+  const cardStyle = {
+    background: 'var(--bg-card)', border: '1px solid var(--bg-card-border)',
+    borderRadius: 16, padding: 24, marginTop: 24,
+  };
+  const headStyle = {
+    fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16,
+    display: 'flex', alignItems: 'center', gap: 8,
+  };
+  const tagStyle = (color) => ({
+    background: color + '22', color, border: `1px solid ${color}44`,
+    borderRadius: 6, padding: '2px 8px', fontSize: 12, fontWeight: 700,
+  });
+
+  return (
+    <>
+      {/* ── Ensemble Comparison ─────────────────────────────── */}
+      <div style={cardStyle}>
+        <h2 style={headStyle}>🏆 V3 Stacking Ensemble vs V2 XGBoost</h2>
+        {ensembleData ? (() => {
+          const em  = ensembleData.ensemble_metrics || {};
+          const v2  = ensembleData.v2_baseline_metrics || {};
+          const imp = ensembleData.improvement_over_v2_pct || {};
+          const ind = ensembleData.individual_metrics || {};
+          const rows = [
+            { label: 'AUC',           v2: v2.auc,       ens: em.auc,       imp: imp.auc },
+            { label: 'F1 Score',      v2: v2.f1,        ens: em.f1,        imp: imp.f1 },
+            { label: 'Precision',     v2: v2.precision, ens: em.precision, imp: imp.precision },
+            { label: "Cohen's κ",     v2: v2.kappa,     ens: em.kappa,     imp: imp.kappa },
+          ];
+          return (
+            <>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                <thead>
+                  <tr style={{ color: 'var(--text-muted)', borderBottom: '1px solid var(--bg-card-border)' }}>
+                    {['Metric', 'V2 XGBoost', 'V3 Ensemble', 'Improvement'].map(h => (
+                      <th key={h} style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map(({ label, v2: bv, ens, imp: pct }) => (
+                    <tr key={label} style={{ borderBottom: '1px solid var(--bg-card-border)' }}>
+                      <td style={{ padding: '10px 12px', color: 'var(--text-primary)', fontWeight: 600 }}>{label}</td>
+                      <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>{bv?.toFixed(4) ?? '—'}</td>
+                      <td style={{ padding: '10px 12px', color: '#6366f1', fontWeight: 700 }}>{ens?.toFixed(4) ?? '—'}</td>
+                      <td style={{ padding: '10px 12px' }}>
+                        {pct != null ? (
+                          <span style={tagStyle(pct >= 0 ? '#10b981' : '#f43f5e')}>
+                            {pct >= 0 ? '+' : ''}{pct?.toFixed(2)}%
+                          </span>
+                        ) : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div style={{ marginTop: 16, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                {Object.entries(ind).map(([name, m]) => (
+                  <div key={name} style={{
+                    background: 'rgba(99,102,241,0.08)', borderRadius: 10,
+                    padding: '10px 16px', border: '1px solid rgba(99,102,241,0.2)',
+                  }}>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4, textTransform: 'capitalize' }}>{name}</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: '#6366f1' }}>AUC {m.auc?.toFixed(4)}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>F1 {m.f1?.toFixed(4)}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          );
+        })() : (
+          <div style={{ color: 'var(--text-dim)', fontSize: 14, textAlign: 'center', padding: 24 }}>
+            Ensemble not yet trained. Click &quot;Train Ensemble&quot; on the Settings page.
+          </div>
+        )}
+      </div>
+
+      {/* ── 5-Fold CV Report ────────────────────────────────── */}
+      <div style={cardStyle}>
+        <h2 style={headStyle}>📊 5-Fold Cross-Validation Report</h2>
+        {cvData?.metrics ? (() => {
+          const m = cvData.metrics;
+          const metricRows = [
+            { key: 'auc',       label: 'AUC',       color: '#6366f1' },
+            { key: 'f1',        label: 'F1 Score',  color: '#10b981' },
+            { key: 'precision', label: 'Precision', color: '#f59e0b' },
+            { key: 'recall',    label: 'Recall',    color: '#06b6d4' },
+          ];
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+              {metricRows.map(({ key, label, color }) => {
+                const metric = m[key] || {};
+                return (
+                  <div key={key} style={{
+                    background: color + '11', border: `1px solid ${color}33`,
+                    borderRadius: 12, padding: 16,
+                  }}>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>{label}</div>
+                    <div style={{ fontSize: 28, fontWeight: 800, color }}>{metric.mean?.toFixed(4)}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
+                      95% CI [{metric.ci_lower?.toFixed(4)}, {metric.ci_upper?.toFixed(4)}]
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 6 }}>
+                      std ±{metric.std?.toFixed(4)} &nbsp;|&nbsp; range [{metric.min?.toFixed(4)}, {metric.max?.toFixed(4)}]
+                    </div>
+                    <div style={{ marginTop: 8, display: 'flex', gap: 4 }}>
+                      {(metric.per_fold || []).map((v, i) => (
+                        <div key={i} style={{
+                          flex: 1, height: 28, background: color,
+                          opacity: 0.4 + (v / 1) * 0.6,
+                          borderRadius: 4, display: 'flex', alignItems: 'center',
+                          justifyContent: 'center', fontSize: 9, color: '#fff', fontWeight: 700,
+                        }}>
+                          F{i+1}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })() : (
+          <div style={{ color: 'var(--text-dim)', fontSize: 14, textAlign: 'center', padding: 24 }}>
+            CV report not computed. POST /api/dashboard/compute-cv to generate.
+          </div>
+        )}
+      </div>
+
+      {/* ── Learning Curve ──────────────────────────────────── */}
+      <div style={cardStyle}>
+        <h2 style={headStyle}>📈 Learning Curve — Performance vs Training Data Size</h2>
+        {lcData?.curve?.length > 0 ? (
+          <ResponsiveContainer width="100%" height={260}>
+            <LineChart data={lcData.curve} margin={{ top: 8, right: 24, bottom: 8, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+              <XAxis dataKey="train_pct" tickFormatter={v => `${v}%`}
+                stroke="#64748b" tick={{ fill: '#64748b', fontSize: 11 }}
+                label={{ value: '% Training Data Used', position: 'insideBottom', offset: -2, fill: '#64748b', fontSize: 11 }} />
+              <YAxis domain={[0.93, 1.0]} stroke="#64748b" tick={{ fill: '#64748b', fontSize: 11 }}
+                tickFormatter={v => v.toFixed(3)} />
+              <Tooltip
+                contentStyle={{ background: '#1a2340', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8 }}
+                formatter={(v, name) => [v.toFixed(4), name === 'test_auc' ? 'AUC' : 'F1']}
+                labelFormatter={v => `Training size: ${v}%`}
+              />
+              <Legend formatter={v => v === 'test_auc' ? 'Test AUC' : 'Test F1'} wrapperStyle={{ fontSize: 12 }} />
+              <Line type="monotone" dataKey="test_auc" stroke="#6366f1" strokeWidth={2.5} dot={{ r: 4, fill: '#6366f1' }} />
+              <Line type="monotone" dataKey="test_f1"  stroke="#10b981" strokeWidth={2.5} dot={{ r: 4, fill: '#10b981' }} />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div style={{ color: 'var(--text-dim)', fontSize: 14, textAlign: 'center', padding: 24 }}>
+            Learning curve not computed. POST /api/dashboard/compute-learning-curve to generate.
+          </div>
+        )}
+      </div>
+
+      {/* ── PDP Chart (first 3 features) ────────────────────── */}
+      <div style={cardStyle}>
+        <h2 style={headStyle}>🔬 Partial Dependence Plots — Feature Effect on Risk</h2>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 16 }}>
+          Shows how each feature independently affects the predicted dropout risk score, holding all other features at their median value.
+        </p>
+        {pdpData?.features ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
+            {Object.entries(pdpData.features).slice(0, 6).map(([feat, data]) => {
+              const chartData = (data.x || []).map((x, i) => ({ x: parseFloat(x.toFixed(2)), y: data.y[i] }));
+              const label = feat.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+              return (
+                <div key={feat} style={{
+                  background: 'rgba(255,255,255,0.03)', borderRadius: 10,
+                  padding: '12px 16px', border: '1px solid var(--bg-card-border)',
+                }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>{label}</div>
+                  <ResponsiveContainer width="100%" height={150}>
+                    <LineChart data={chartData} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
+                      <XAxis dataKey="x" tick={{ fill: '#64748b', fontSize: 9 }} tickCount={4} />
+                      <YAxis domain={[0, 1]} tick={{ fill: '#64748b', fontSize: 9 }} tickFormatter={v => v.toFixed(1)} />
+                      <Tooltip
+                        contentStyle={{ background: '#1a2340', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, fontSize: 11 }}
+                        formatter={v => [v.toFixed(4), 'Risk']}
+                      />
+                      <ReferenceLine y={0.4432} stroke="#f59e0b" strokeDasharray="4 4" strokeWidth={1} />
+                      <Line type="monotone" dataKey="y" stroke="#6366f1" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                  <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 4 }}>
+                    Median: {data.feature_median?.toFixed(2)} &nbsp;|&nbsp; Range: [{data.feature_min?.toFixed(1)}, {data.feature_max?.toFixed(1)}]
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div style={{ color: 'var(--text-dim)', fontSize: 14, textAlign: 'center', padding: 24 }}>
+            PDP not computed. POST /api/dashboard/compute-pdp to generate.
+          </div>
+        )}
+      </div>
+    </>
   );
 }

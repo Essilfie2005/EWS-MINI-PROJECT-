@@ -22,6 +22,7 @@ import {
   Line,
 } from 'recharts';
 import { fetchStudentDetail, createIntervention, updateIntervention, triggerSinglePrediction, fetchPredictionHistory, fetchStudentInterventions, fetchRiskTrajectory, downloadPdfBrief } from '../services/api';
+import api from '../services/api';
 import { SkeletonCard, SkeletonChart } from '../components/shared/Skeleton';
 import ErrorState from '../components/shared/ErrorState';
 import { useToast } from '../context/ToastContext';
@@ -191,6 +192,9 @@ export default function StudentDetailPage() {
   const [trajectoryLoading, setTrajectoryLoading] = useState(false);
   const [trajectoryUnavailable, setTrajectoryUnavailable] = useState(false);
 
+  // V3 — 4-week forecast
+  const [forecast, setForecast] = useState(null);
+
   // PDF export
   const [downloadingPdf, setDownloadingPdf] = useState(false);
 
@@ -253,6 +257,14 @@ export default function StudentDetailPage() {
         setTrajectoryUnavailable(true);
       })
       .finally(() => setTrajectoryLoading(false));
+  }, [id]);
+
+  // V3 — Load 4-week forecast
+  useEffect(() => {
+    if (!id) return;
+    api.get(`/predictions/forecast/${id}`)
+      .then(res => setForecast(res.data))
+      .catch(() => {});
   }, [id]);
 
   const handleDownloadPdf = async () => {
@@ -628,6 +640,71 @@ export default function StudentDetailPage() {
           onClose={() => setShowModal(false)}
           onSuccess={loadStudent}
         />
+      )}
+
+      {/* V3 — 4-Week Risk Forecast */}
+      {forecast && (
+        <div style={{
+          background: 'var(--bg-card)', border: '1px solid var(--bg-card-border)',
+          borderRadius: 16, padding: 24, marginTop: 24,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+              📡 4-Week Risk Forecast (Prophet)
+            </h3>
+            {forecast.trend && (
+              <span style={{
+                background: forecast.trend.color + '22',
+                color: forecast.trend.color,
+                border: `1px solid ${forecast.trend.color}44`,
+                borderRadius: 8, padding: '4px 12px',
+                fontSize: 12, fontWeight: 700,
+              }}>
+                {forecast.trend.label.replace(/_/g, ' ')}
+              </span>
+            )}
+          </div>
+          {forecast.trend && (
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
+              {forecast.trend.description}
+            </p>
+          )}
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={forecast.combined || []} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+              <XAxis dataKey="week" tick={{ fill: '#64748b', fontSize: 10 }} />
+              <YAxis domain={[0, 1]} tick={{ fill: '#64748b', fontSize: 10 }} tickFormatter={v => v.toFixed(1)} />
+              <Tooltip
+                contentStyle={{ background: '#1a2340', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }}
+                formatter={(v, name, props) => [
+                  v?.toFixed(4),
+                  props.payload?.type === 'forecast' ? '🔮 Forecast' : '📊 Historical'
+                ]}
+              />
+              <ReferenceLine y={forecast.youden_threshold || 0.4432} stroke="#f59e0b" strokeDasharray="4 4"
+                label={{ value: 'Risk threshold', position: 'right', fill: '#f59e0b', fontSize: 10 }} />
+              <Line
+                type="monotone" dataKey="risk_score"
+                stroke="#6366f1" strokeWidth={2.5}
+                dot={(props) => {
+                  const { cx, cy, payload } = props;
+                  return (
+                    <circle key={payload.week} cx={cx} cy={cy} r={4}
+                      fill={payload.type === 'forecast' ? '#f59e0b' : '#6366f1'}
+                      stroke="none" />
+                  );
+                }}
+                strokeDasharray={(d) => d?.type === 'forecast' ? '6 3' : undefined}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+          <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: 11, color: 'var(--text-dim)' }}>
+            <span>🟣 Historical ({forecast.history_weeks} weeks)</span>
+            <span>🟡 Forecast ({forecast.forecast_weeks} weeks)</span>
+            <span>Method: {forecast.method}</span>
+            {forecast.synthetic_history && <span style={{ color: '#f59e0b' }}>⚠ Synthetic history (insufficient real data)</span>}
+          </div>
+        </div>
       )}
     </div>
   );
