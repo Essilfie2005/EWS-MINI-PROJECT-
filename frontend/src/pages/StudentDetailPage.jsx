@@ -146,11 +146,10 @@ function InterventionModal({ studentId, onClose, onSuccess }) {
               onChange={(e) => setForm({ ...form, outcome: e.target.value })}
               required
             >
-              <option value="">Select outcome...</option>
-              <option value="positive">Positive — Student Engaged</option>
-              <option value="neutral">Neutral — No Change</option>
-              <option value="negative">Negative — No Response</option>
-              <option value="pending">Pending Follow-up</option>
+              <option value="">Unknown / Not yet assessed</option>
+              <option value="SUCCESSFUL">✅ Successful — Student Recovered</option>
+              <option value="UNSUCCESSFUL">❌ Unsuccessful — Student Did Not Respond</option>
+              <option value="PENDING">⏳ Pending — Follow-up Required</option>
             </select>
           </div>
           <div className="form-group">
@@ -195,7 +194,9 @@ export default function StudentDetailPage() {
   // V3 — 4-week forecast
   const [forecast, setForecast] = useState(null);
 
-  // PDF export
+  // Outcome updating state
+  const [updatingOutcome, setUpdatingOutcome] = useState(null); // intervention id being updated
+
   const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   const handleGenerateShap = async () => {
@@ -587,40 +588,113 @@ export default function StudentDetailPage() {
             <h3 className="section-title" style={{ marginBottom: 16 }}>Intervention Timeline</h3>
             {interventions.length > 0 ? (
               <div className="timeline">
-                {interventions.map((item, i) => (
-                  <div className="timeline-item" key={item.id || i}>
-                    <div className="timeline-date">
-                      {item.date
-                        ? new Date(item.date).toLocaleDateString('en-GB', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                          })
-                        : '—'}
-                    </div>
-                    <div className="timeline-title">
-                      {(item.nature || 'Intervention').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-                    </div>
-                    <div className="timeline-desc">
-                      {item.outcome && (
-                        <span
-                          style={{
-                            color:
-                              item.outcome === 'positive'
-                                ? 'var(--risk-safe)'
-                                : item.outcome === 'negative'
-                                ? 'var(--risk-high)'
-                                : 'var(--text-muted)',
-                            fontWeight: 600,
-                          }}
-                        >
-                          {item.outcome.charAt(0).toUpperCase() + item.outcome.slice(1)}
-                        </span>
+                {interventions.map((item, i) => {
+                  const outcomeMap = {
+                    SUCCESSFUL:   { label: 'Successful',   color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
+                    UNSUCCESSFUL: { label: 'Unsuccessful', color: '#f43f5e', bg: 'rgba(244,63,94,0.12)' },
+                    PENDING:      { label: 'Pending',      color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
+                    positive:     { label: 'Successful',   color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
+                    negative:     { label: 'Unsuccessful', color: '#f43f5e', bg: 'rgba(244,63,94,0.12)' },
+                    neutral:      { label: 'Pending',      color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
+                  };
+                  const oc = outcomeMap[item.outcome] || null;
+                  const isUpdating = updatingOutcome === (item.id || i);
+
+                  const handleOutcomeUpdate = async (newOutcome) => {
+                    if (!item.id) return;
+                    setUpdatingOutcome(item.id);
+                    try {
+                      await updateIntervention(item.id, { status: 'COMPLETED', outcome: newOutcome });
+                      addToast(`Outcome marked as ${newOutcome}`, 'success');
+                      await loadStudent();
+                    } catch {
+                      addToast('Failed to update outcome', 'error');
+                    } finally {
+                      setUpdatingOutcome(null);
+                    }
+                  };
+
+                  return (
+                    <div className="timeline-item" key={item.id || i} style={{ paddingBottom: 20 }}>
+                      <div className="timeline-date">
+                        {item.created_at
+                          ? new Date(item.created_at).toLocaleDateString('en-GB', {
+                              day: 'numeric', month: 'short', year: 'numeric',
+                            })
+                          : item.date
+                            ? new Date(item.date).toLocaleDateString('en-GB', {
+                                day: 'numeric', month: 'short', year: 'numeric',
+                              })
+                            : '—'}
+                      </div>
+                      <div className="timeline-title">
+                        {(item.intervention_type || item.nature || 'Intervention')
+                          .replace(/_/g, ' ')
+                          .replace(/\b\w/g, (c) => c.toUpperCase())}
+                      </div>
+
+                      {/* Description */}
+                      {(item.description || item.notes) && (
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
+                          {item.description || item.notes}
+                        </div>
                       )}
-                      {item.notes && <span style={{ marginLeft: 8 }}>— {item.notes}</span>}
+
+                      {/* Current outcome badge */}
+                      <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                        {oc ? (
+                          <span style={{
+                            background: oc.bg, color: oc.color,
+                            border: `1px solid ${oc.color}44`,
+                            borderRadius: 8, padding: '3px 10px',
+                            fontSize: 12, fontWeight: 700,
+                          }}>
+                            {oc.label}
+                          </span>
+                        ) : (
+                          <span style={{
+                            background: 'rgba(148,163,184,0.12)', color: '#94a3b8',
+                            border: '1px solid rgba(148,163,184,0.2)',
+                            borderRadius: 8, padding: '3px 10px',
+                            fontSize: 12, fontWeight: 600,
+                          }}>No outcome yet</span>
+                        )}
+
+                        {/* Inline update buttons — always visible */}
+                        {isUpdating ? (
+                          <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Saving…</span>
+                        ) : (
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            {[
+                              { val: 'SUCCESSFUL',   label: '✅ Successful',   color: '#10b981' },
+                              { val: 'UNSUCCESSFUL', label: '❌ Unsuccessful', color: '#f43f5e' },
+                              { val: 'PENDING',      label: '⏳ Pending',      color: '#f59e0b' },
+                            ].map(({ val, label, color }) => (
+                              <button
+                                key={val}
+                                onClick={() => handleOutcomeUpdate(val)}
+                                disabled={item.outcome === val}
+                                style={{
+                                  background: item.outcome === val ? color + '22' : 'transparent',
+                                  color: item.outcome === val ? color : 'var(--text-dim)',
+                                  border: `1px solid ${item.outcome === val ? color + '55' : 'rgba(255,255,255,0.1)'}`,
+                                  borderRadius: 6, padding: '3px 9px',
+                                  fontSize: 11, fontWeight: 600,
+                                  cursor: item.outcome === val ? 'default' : 'pointer',
+                                  transition: 'all 0.2s',
+                                }}
+                                onMouseEnter={e => { if (item.outcome !== val) e.target.style.borderColor = color + '88'; }}
+                                onMouseLeave={e => { if (item.outcome !== val) e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                              >
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="empty-state" style={{ padding: '24px 16px' }}>
