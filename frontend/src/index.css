@@ -1920,3 +1920,206 @@ input, select, textarea {
   justify-content: flex-end;
   gap: 10px;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   FULL MOBILE RESPONSIVENESS  (<=768px phones, <=1024px tablets)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Touch target minimum size */
+@media (max-width: 768px) {
+  button, .btn, a.btn { min-height: 44px; }
+
+  /* Typography scale-down */
+  .page-title    { font-size: 20px !important; }
+  .section-title { font-size: 14px !important; }
+  .metric-value  { font-size: 24px !important; }
+
+  /* Header */
+  .mobile-menu-btn { display: flex !important; }
+  .header-search   { display: none !important; }
+  .sidebar-toggle  { display: none !important; }
+  .header          { padding: 0 12px !important; height: 56px !important; }
+
+  /* Page content: safe bottom padding for bottom nav */
+  .page-content {
+    padding: 12px 10px 90px !important;
+  }
+
+  /* Metric cards: 2-column grid */
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  /* Dashboard grid: single column */
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  /* Glass cards */
+  .glass-card {
+    padding: 14px 12px !important;
+    border-radius: 12px !important;
+  }
+
+  /* Student detail: always single column */
+  .student-detail-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  /* Gauge */
+  .gauge-ring { width: 140px !important; height: 140px !important; }
+  .gauge-value .score { font-size: 26px !important; }
+
+  /* SHAP bars */
+  .shap-label { width: 90px !important; font-size: 11px !important; }
+  .shap-value { width: 48px !important; }
+
+  /* Tables: horizontal scroll */
+  .table-scroll-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 10px;
+  }
+  .table-scroll-wrapper table { min-width: 600px; }
+
+  /* Student action buttons */
+  .student-actions {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  .student-actions .btn {
+    flex: 1 1 auto !important;
+    justify-content: center !important;
+    font-size: 12px !important;
+  }
+
+  /* Modals: bottom sheet style */
+  .modal-overlay { align-items: flex-end !important; padding: 0 !important; }
+  .modal-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 90vh !important;
+    border-radius: 20px 20px 0 0 !important;
+    padding: 20px 16px !important;
+    overflow-y: auto !important;
+  }
+
+  /* Toast */
+  .toast-container {
+    top: auto !important;
+    bottom: 80px !important;
+    right: 10px !important;
+    left: 10px !important;
+  }
+  .toast { max-width: 100% !important; font-size: 13px !important; }
+
+  /* Timeline */
+  .timeline { padding-left: 18px !important; }
+  .timeline-item::before { left: -17px !important; }
+
+  /* Risk badges */
+  .risk-badge { font-size: 10px !important; padding: 2px 6px !important; }
+}
+
+/* Extra-small phones (<=480px) */
+@media (max-width: 480px) {
+  .metrics-grid { grid-template-columns: 1fr !important; }
+  .page-title   { font-size: 18px !important; }
+  .glass-card   { padding: 12px !important; }
+
+  /* Students table: stack as cards */
+  table.students-table,
+  table.students-table thead,
+  table.students-table tbody,
+  table.students-table th,
+  table.students-table td,
+  table.students-table tr { display: block !important; width: 100% !important; }
+  table.students-table thead { display: none !important; }
+  table.students-table tr {
+    margin-bottom: 12px !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 10px !important;
+    padding: 12px !important;
+    background: var(--bg-card) !important;
+  }
+  table.students-table td {
+    border: none !important;
+    padding: 4px 0 !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    font-size: 13px !important;
+  }
+  table.students-table td::before {
+    content: attr(data-label) !important;
+    font-weight: 600 !important;
+    color: var(--text-muted) !important;
+    font-size: 11px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   BOTTOM NAVIGATION BAR (mobile only)
+   ───────────────────────────────────────────────────────────────────────────── */
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 100;
+  padding: 0 8px;
+  padding-bottom: env(safe-area-inset-bottom);
+  align-items: center;
+  justify-content: space-around;
+}
+
+@media (max-width: 768px) {
+  .mobile-bottom-nav { display: flex !important; }
+}
+
+.mobile-bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  flex: 1;
+  height: 100%;
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  transition: color 0.2s;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 4px 0;
+  min-height: 44px;
+}
+
+.mobile-bottom-nav-item svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
+  transition: color 0.2s, transform 0.2s;
+}
+
+.mobile-bottom-nav-item.active {
+  color: var(--accent);
+}
+.mobile-bottom-nav-item.active svg {
+  transform: translateY(-2px);
+}

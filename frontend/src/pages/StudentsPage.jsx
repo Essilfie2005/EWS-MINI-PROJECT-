@@ -159,8 +159,8 @@ export default function StudentsPage() {
           <ErrorState message={error} onRetry={loadData} />
         ) : (
           <>
-            <div className="data-table-wrapper">
-              <table className="data-table">
+            <div className="data-table-wrapper table-scroll-wrapper">
+              <table className="data-table students-table">
                 <thead>
                   <tr>
                     {columns.map((col) => (
