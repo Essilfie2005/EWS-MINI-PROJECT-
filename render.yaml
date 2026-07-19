@@ -1,0 +1,34 @@
+# render.yaml — Render.com one-click deployment config
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  # ── Backend API ─────────────────────────────────────────────────────────────
+  - type: web
+    name: ews-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ews-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ENVIRONMENT
+        value: production
+      - key: CORS_ORIGINS
+        value: https://ews-frontend.vercel.app
+      - key: AFRICAS_TALKING_USERNAME
+        sync: false
+      - key: AFRICAS_TALKING_API_KEY
+        sync: false
+    healthCheckPath: /api/dashboard/health
+
+  # ── PostgreSQL Database ──────────────────────────────────────────────────────
+databases:
+  - name: ews-db
+    databaseName: ews
+    user: ews_user
+    plan: free
