@@ -1784,22 +1784,23 @@ input, select, textarea {
 }
 
 /* ---------- Mobile Responsive Tables ---------- */
+/* Note: students-table is excluded here — it uses horizontal scroll instead */
 @media (max-width: 1024px) {
-  table.data-table,
-  table.data-table thead,
-  table.data-table tbody,
-  table.data-table th,
-  table.data-table td,
-  table.data-table tr {
+  table.data-table:not(.students-table),
+  table.data-table:not(.students-table) thead,
+  table.data-table:not(.students-table) tbody,
+  table.data-table:not(.students-table) th,
+  table.data-table:not(.students-table) td,
+  table.data-table:not(.students-table) tr {
     display: block;
     width: 100%;
   }
   
-  table.data-table thead {
+  table.data-table:not(.students-table) thead {
     display: none;
   }
   
-  table.data-table tr {
+  table.data-table:not(.students-table) tr {
     margin-bottom: 16px;
     background: rgba(255, 255, 255, 0.02) !important;
     border: 1px solid var(--glass-border);
@@ -1807,7 +1808,7 @@ input, select, textarea {
     padding: 8px 0;
   }
   
-  table.data-table td {
+  table.data-table:not(.students-table) td {
     border-bottom: 1px solid rgba(255, 255, 255, 0.03);
     position: relative;
     padding: 12px 16px 12px 45%;
@@ -1817,11 +1818,11 @@ input, select, textarea {
     align-items: center;
   }
   
-  table.data-table td:last-child {
+  table.data-table:not(.students-table) td:last-child {
     border-bottom: none;
   }
   
-  table.data-table td::before {
+  table.data-table:not(.students-table) td::before {
     content: attr(data-label);
     position: absolute;
     left: 16px;
@@ -1835,6 +1836,23 @@ input, select, textarea {
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
+
+  /* Students table: always horizontal scroll — no card stacking */
+  .table-scroll-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .table-scroll-wrapper table.students-table {
+    min-width: 580px;
+    display: table !important;
+    width: 100% !important;
+  }
+  .table-scroll-wrapper table.students-table thead { display: table-header-group !important; }
+  .table-scroll-wrapper table.students-table tbody { display: table-row-group !important; }
+  .table-scroll-wrapper table.students-table tr   { display: table-row !important; background: none !important; border: none !important; margin: 0 !important; padding: 0 !important; }
+  .table-scroll-wrapper table.students-table th,
+  .table-scroll-wrapper table.students-table td   { display: table-cell !important; width: auto !important; padding: 12px 14px !important; text-align: left !important; position: static !important; }
+  .table-scroll-wrapper table.students-table td::before { display: none !important; }
 }
 
 /* ---------- Missing stagger delays ---------- */
@@ -2030,37 +2048,12 @@ input, select, textarea {
   .page-title   { font-size: 18px !important; }
   .glass-card   { padding: 12px !important; }
 
-  /* Students table: stack as cards */
-  table.students-table,
-  table.students-table thead,
-  table.students-table tbody,
-  table.students-table th,
-  table.students-table td,
-  table.students-table tr { display: block !important; width: 100% !important; }
-  table.students-table thead { display: none !important; }
-  table.students-table tr {
-    margin-bottom: 12px !important;
-    border: 1px solid var(--glass-border) !important;
-    border-radius: 10px !important;
-    padding: 12px !important;
-    background: var(--bg-card) !important;
+  /* Students table: keep horizontal scroll even on smallest phones */
+  .table-scroll-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
-  table.students-table td {
-    border: none !important;
-    padding: 4px 0 !important;
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    font-size: 13px !important;
-  }
-  table.students-table td::before {
-    content: attr(data-label) !important;
-    font-weight: 600 !important;
-    color: var(--text-muted) !important;
-    font-size: 11px !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.04em !important;
-  }
+  .table-scroll-wrapper table.students-table { min-width: 520px; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
