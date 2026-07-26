@@ -227,9 +227,20 @@ export default function AnalyticsPage() {
   // ── Calibration Curve ─────────────────────────────────────────────────
   const calibData = useMemo(() => {
     if (!calibration.data) return null;
-    const raw = Array.isArray(calibration.data) ? calibration.data : calibration.data?.points;
+    const d = calibration.data;
+
+    // Backend format: { mean_predicted: [...], fraction_positive: [...] }
+    if (Array.isArray(d.mean_predicted) && Array.isArray(d.fraction_positive)) {
+      return d.mean_predicted.map((x, i) => ({
+        mean_predicted: x,
+        fraction_positives: d.fraction_positive[i],
+        perfect: x,
+      }));
+    }
+
+    // Fallback: array of point objects or { points: [...] }
+    const raw = Array.isArray(d) ? d : d?.points;
     if (!raw) return null;
-    // Also append the perfect calibration line as a second series
     return raw.map((pt) => ({
       mean_predicted: pt.mean_predicted ?? pt.x,
       fraction_positives: pt.fraction_positives ?? pt.y,
