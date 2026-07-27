@@ -129,20 +129,8 @@ export default function SettingsPage() {
       const result = res.data;
       setUploadResult(result);
       const count = (result.inserted || 0) + (result.updated || 0);
-      addToast(`✅ ${count} students processed (${result.inserted || 0} new, ${result.updated || 0} updated)`, 'success');
-
-      // Fire predictions in background — don't block UI
-      setPredicting(true);
-      addToast('Scoring students in background — check Students page shortly...', 'info');
-      api.post('/predictions/predict-batch', { student_ids: null }, { timeout: 600000 })
-        .then(() => {
-          addToast('✅ Risk scores generated! Refresh the Students page.', 'success');
-          setPredicting(false);
-        })
-        .catch(() => {
-          addToast('Scoring may still be running. Check Students page in a minute.', 'warning');
-          setPredicting(false);
-        });
+      const scored = result.scored || 0;
+      addToast(`✅ ${count} students uploaded, ${scored} scored — check the Students page!`, 'success');
     } catch (err) {
       // Friendly message when backend is simply not running
       if (!err.response) {

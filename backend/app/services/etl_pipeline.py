@@ -164,6 +164,34 @@ async def ingest_csv(
 
     await session.commit()
 
+    # ── Inline scoring of upserted students ──────────────────────────────
+    # Score only the students we just inserted/updated (not all 2000+)
+    try:
+        from app.services import ml_pipeline as _ml
+        if _ml.is_model_loaded():
+            scored = 0
+            result_all = await session.execute(
+                select(Student).where(Student.anon_id.in_([
+                    hash_student_id(str(row[actual_id_col])) for _, row in df.iterrows()
+                ]))
+            )
+            for student in result_all.scalars().all():
+                features = {col: getattr(student, col) for col in FEATURE_COLS}
+                pred = _ml.predict_single(features)
+                student.risk_score = pred["risk_score"]
+                student.risk_band  = pred["risk_band"]
+                student.is_flagged = (pred["risk_band"] == "HIGH")
+                scored += 1
+            await session.commit()
+            logger.info("Inline scoring complete: %d students scored", scored)
+            inserted_scored = scored
+        else:
+            logger.warning("Model not loaded — skipping inline scoring")
+            inserted_scored = 0
+    except Exception as exc:
+        logger.warning("Inline scoring failed (non-fatal): %s", exc)
+        inserted_scored = 0
+
     # Save processed version
     processed_path = PROCESSED_DIR / f"processed_{file_path.stem}.csv"
     df.to_csv(processed_path, index=False)
@@ -171,6 +199,7 @@ async def ingest_csv(
     summary = {
         "inserted": inserted,
         "updated": updated,
+        "scored": inserted_scored,
         "total_rows": len(df),
         "warnings": warnings,
         "processed_file": str(processed_path),
