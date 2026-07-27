@@ -554,10 +554,10 @@ export default function AnalyticsPage() {
 
 // ── V3 Panels (separate component to keep file manageable) ──────────────────
 function V3AnalyticsPanels() {
-  const { data: ensembleData } = useApi(() => api.get('/dashboard/ensemble-metrics').then(r => r.data), []);
-  const { data: cvData }       = useApi(() => api.get('/dashboard/cv-report').then(r => r.data), []);
-  const { data: pdpData }      = useApi(() => api.get('/dashboard/pdp').then(r => r.data), []);
-  const { data: lcData }       = useApi(() => api.get('/dashboard/learning-curve').then(r => r.data), []);
+  const { data: ensembleData } = useApi(() => api.get('/dashboard/ensemble-metrics'), []);
+  const { data: cvData }       = useApi(() => api.get('/dashboard/cv-report'), []);
+  const { data: pdpData }      = useApi(() => api.get('/dashboard/pdp'), []);
+  const { data: lcData }       = useApi(() => api.get('/dashboard/learning-curve'), []);
 
   const cardStyle = {
     background: 'var(--bg-card)', border: '1px solid var(--bg-card-border)',
