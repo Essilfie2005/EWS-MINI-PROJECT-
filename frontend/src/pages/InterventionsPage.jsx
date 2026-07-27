@@ -82,13 +82,27 @@ export default function InterventionsPage() {
     }
     setSubmitting(true);
     try {
-      await createIntervention(form);
+      // Map frontend field names → backend expected names
+      const payload = {
+        student_id:        parseInt(form.student_id, 10),
+        intervention_type: form.nature,
+        description:       form.notes || '',
+      };
+      const res = await createIntervention(payload);
+      // If outcome is set, update it immediately after creation
+      if (form.outcome && res.data?.id) {
+        await api.patch(`/interventions/${res.data.id}`, { outcome: form.outcome, status: 'COMPLETED' });
+      }
       addToast('Intervention logged successfully', 'success');
       setShowModal(false);
       setForm({ student_id: '', date: new Date().toISOString().slice(0, 10), nature: '', outcome: '', notes: '' });
       loadInterventions();
     } catch (err) {
-      addToast(err.response?.data?.detail || 'Failed to log intervention', 'error');
+      const detail = err.response?.data?.detail;
+      const msg = Array.isArray(detail)
+        ? detail.map(d => d.msg || JSON.stringify(d)).join(', ')
+        : (typeof detail === 'string' ? detail : 'Failed to log intervention');
+      addToast(msg, 'error');
     } finally {
       setSubmitting(false);
     }
