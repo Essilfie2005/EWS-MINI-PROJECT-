@@ -21,6 +21,22 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 
 
+class AppUser(Base):
+    """Dashboard user accounts stored in the database."""
+
+    __tablename__ = "app_users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    email: Mapped[Optional[str]] = mapped_column(String(128), unique=True, nullable=True)
+    password_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    role: Mapped[str] = mapped_column(String(32), nullable=False, default="counsellor")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
 class Student(Base):
     """Core student table – stores anonymised profile + academic features."""
 

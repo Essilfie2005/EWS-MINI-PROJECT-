@@ -14,6 +14,9 @@ const api = axios.create({
 export const login = (username, password) =>
   axios.post(`${API_BASE}/auth/login`, { username, password });
 
+export const registerUser = (data) =>
+  axios.post(`${API_BASE}/auth/register`, data);
+
 export const logout = () => {
   localStorage.removeItem('ews_token');
   localStorage.removeItem('ews_user');

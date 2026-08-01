@@ -121,6 +121,12 @@ export default function LoginPage({ onLogin }) {
         </form>
 
         <p className="login-hint">Demo: <code>admin</code> / <code>ews2024</code></p>
+        <p className="login-hint" style={{ marginTop: 8 }}>
+          Don't have an account?{' '}
+          <a href="/signup" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>
+            Create account
+          </a>
+        </p>
       </div>
 
       <style>{`
