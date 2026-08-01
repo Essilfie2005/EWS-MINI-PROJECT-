@@ -1,14 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  Plus,
-  X,
   HandHelping,
   TrendingUp,
   Calendar,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import { fetchInterventions, createIntervention } from '../services/api';
+import { fetchInterventions } from '../services/api';
 import { SkeletonTable, SkeletonCard } from '../components/shared/Skeleton';
 import ErrorState from '../components/shared/ErrorState';
 import { useToast } from '../context/ToastContext';
@@ -24,15 +22,6 @@ export default function InterventionsPage() {
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
 
-  // Modal
-  const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({
-    student_id: '',
-    date: new Date().toISOString().slice(0, 10),
-    nature: '',
-    outcome: '',
-    notes: '',
-  });
   const [submitting, setSubmitting] = useState(false);
 
   const loadInterventions = useCallback(async () => {
@@ -74,39 +63,6 @@ export default function InterventionsPage() {
   const totalPages = Math.max(1, Math.ceil(interventions.length / PAGE_SIZE));
   const paginated = interventions.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!form.student_id || !form.nature || !form.outcome) {
-      addToast('Please fill all required fields', 'error');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      // Map frontend field names → backend expected names
-      const payload = {
-        student_id:        parseInt(form.student_id, 10),
-        intervention_type: form.nature,
-        description:       form.notes || '',
-      };
-      const res = await createIntervention(payload);
-      // If outcome is set, update it immediately after creation
-      if (form.outcome && res.data?.id) {
-        await api.patch(`/interventions/${res.data.id}`, { outcome: form.outcome, status: 'COMPLETED' });
-      }
-      addToast('Intervention logged successfully', 'success');
-      setShowModal(false);
-      setForm({ student_id: '', date: new Date().toISOString().slice(0, 10), nature: '', outcome: '', notes: '' });
-      loadInterventions();
-    } catch (err) {
-      const detail = err.response?.data?.detail;
-      const msg = Array.isArray(detail)
-        ? detail.map(d => d.msg || JSON.stringify(d)).join(', ')
-        : (typeof detail === 'string' ? detail : 'Failed to log intervention');
-      addToast(msg, 'error');
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   return (
     <div className="fade-in">
@@ -150,9 +106,7 @@ export default function InterventionsPage() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <h3 className="section-title">Intervention Log</h3>
-        <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}>
-          <Plus size={14} /> Log Intervention
-        </button>
+        <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>Log interventions from a student's detail page</span>
       </div>
 
       {/* Table */}
@@ -250,93 +204,7 @@ export default function InterventionsPage() {
         )}
       </div>
 
-      {/* Modal */}
-      {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2 className="modal-title">Log New Intervention</h2>
-              <button className="modal-close" onClick={() => setShowModal(false)}>
-                <X size={16} />
-              </button>
-            </div>
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label className="form-label">Student ID *</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g. STU-001"
-                  value={form.student_id}
-                  onChange={(e) => setForm({ ...form, student_id: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Date *</label>
-                <input
-                  type="date"
-                  className="form-input"
-                  value={form.date}
-                  onChange={(e) => setForm({ ...form, date: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Nature of Intervention *</label>
-                <select
-                  className="form-select"
-                  value={form.nature}
-                  onChange={(e) => setForm({ ...form, nature: e.target.value })}
-                  required
-                >
-                  <option value="">Select type...</option>
-                  <option value="phone_call">Phone Call</option>
-                  <option value="sms">SMS</option>
-                  <option value="in_person">In-Person Meeting</option>
-                  <option value="email">Email</option>
-                  <option value="counselling">Counselling Session</option>
-                  <option value="peer_mentoring">Peer Mentoring</option>
-                  <option value="academic_support">Academic Support</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Outcome *</label>
-                <select
-                  className="form-select"
-                  value={form.outcome}
-                  onChange={(e) => setForm({ ...form, outcome: e.target.value })}
-                  required
-                >
-                  <option value="">Select outcome...</option>
-                  <option value="positive">Positive — Student Engaged</option>
-                  <option value="neutral">Neutral — No Change</option>
-                  <option value="negative">Negative — No Response</option>
-                  <option value="pending">Pending Follow-up</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Notes</label>
-                <textarea
-                  className="form-input form-textarea"
-                  placeholder="Additional details..."
-                  value={form.notes}
-                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                />
-              </div>
-              <div className="modal-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary" disabled={submitting}>
-                  {submitting ? 'Saving...' : 'Save Intervention'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }
