@@ -45,10 +45,15 @@ export default function InterventionsPage() {
       const d = new Date(i.created_at);
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     }).length;
-    
-    const positive = interventions.filter(i => i.outcome === 'positive').length;
-    const conversion_rate = (positive / interventions.length) * 100;
-    
+
+    // Count interventions with a positive/successful outcome
+    const positive = interventions.filter(i =>
+      i.outcome === 'SUCCESSFUL' || i.outcome === 'positive'
+    ).length;
+    // Only compute rate against interventions that have an outcome recorded
+    const withOutcome = interventions.filter(i => i.outcome && i.outcome !== '').length;
+    const conversion_rate = withOutcome > 0 ? (positive / withOutcome) * 100 : null;
+
     return {
       total_interventions: interventions.length,
       conversion_rate,
