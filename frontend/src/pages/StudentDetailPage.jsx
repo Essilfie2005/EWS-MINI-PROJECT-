@@ -77,6 +77,12 @@ function InterventionModal({ studentId, onClose, onSuccess }) {
   });
   const [submitting, setSubmitting] = useState(false);
 
+  // Lock background scroll while modal is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -105,8 +111,16 @@ function InterventionModal({ studentId, onClose, onSuccess }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="modal-overlay"
+      onClick={onClose}
+      style={{ overflowY: 'auto' }}
+    >
+      <div
+        className="modal-content"
+        onClick={(e) => e.stopPropagation()}
+        style={{ overflowY: 'auto', maxHeight: '90vh' }}
+      >
         <div className="modal-header">
           <h2 className="modal-title">Log Intervention</h2>
           <button className="modal-close" onClick={onClose}>✕</button>
