@@ -2018,17 +2018,17 @@ input, select, textarea {
     font-size: 12px !important;
   }
 
-  /* Modals: full screen on mobile */
+  /* Modals: bottom sheet on mobile */
   .modal-overlay {
-    align-items: stretch !important;
+    align-items: flex-end !important;
     padding: 0 !important;
   }
   .modal-content {
     width: 100% !important;
     max-width: 100% !important;
-    height: 100dvh !important;
-    max-height: 100dvh !important;
-    border-radius: 0 !important;
+    height: 80vh !important;
+    max-height: 80vh !important;
+    border-radius: 16px 16px 0 0 !important;
     padding: 0 !important;
     overflow: hidden !important;
   }
