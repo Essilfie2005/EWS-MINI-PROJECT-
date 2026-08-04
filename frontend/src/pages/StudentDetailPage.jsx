@@ -121,21 +121,20 @@ function InterventionModal({ studentId, onClose, onSuccess }) {
         style={{
           display: 'flex',
           flexDirection: 'column',
-          height: '80vh',
           maxHeight: '80vh',
           padding: 0,
           overflow: 'hidden',
           borderRadius: '16px 16px 0 0',
         }}
       >
-        {/* Fixed header */}
+        {/* Header */}
         <div className="modal-header" style={{ padding: '20px 20px 16px', flexShrink: 0 }}>
           <h2 className="modal-title">Log Intervention</h2>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
 
-        {/* Scrollable body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px', WebkitOverflowScrolling: 'touch' }}>
+        {/* All content in one scrollable block */}
+        <div style={{ overflowY: 'auto', padding: '0 20px 24px', WebkitOverflowScrolling: 'touch' }}>
           <div className="form-group">
             <label className="form-label">Nature of Intervention *</label>
             <select
@@ -165,41 +164,33 @@ function InterventionModal({ studentId, onClose, onSuccess }) {
               <option value="PENDING">⏳ Pending — Follow-up Required</option>
             </select>
           </div>
-          <div className="form-group" style={{ marginBottom: 8 }}>
+          <div className="form-group">
             <label className="form-label">Notes</label>
             <textarea
               className="form-input form-textarea"
               placeholder="Details about the intervention..."
-              rows={3}
+              rows={2}
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              style={{ minHeight: 80, resize: 'vertical' }}
+              style={{ minHeight: 64 }}
             />
           </div>
-        </div>
 
-        {/* Sticky footer — always visible */}
-        <div style={{
-          flexShrink: 0,
-          padding: '16px 20px',
-          paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
-          borderTop: '1px solid var(--glass-border)',
-          display: 'flex',
-          gap: 12,
-          background: 'var(--bg-surface)',
-        }}>
-          <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={onClose}>
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            style={{ flex: 2 }}
-            disabled={submitting || !form.nature}
-            onClick={handleSubmit}
-          >
-            {submitting ? 'Saving...' : 'Save Intervention'}
-          </button>
+          {/* Buttons immediately after Notes */}
+          <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
+            <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={onClose}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ flex: 2 }}
+              disabled={submitting || !form.nature}
+              onClick={handleSubmit}
+            >
+              {submitting ? 'Saving...' : 'Save Intervention'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
