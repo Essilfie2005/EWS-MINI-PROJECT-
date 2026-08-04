@@ -182,6 +182,7 @@ function InterventionModal({ studentId, onClose, onSuccess }) {
         <div style={{
           flexShrink: 0,
           padding: '16px 20px',
+          paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
           borderTop: '1px solid var(--glass-border)',
           display: 'flex',
           gap: 12,
