@@ -114,30 +114,28 @@ function InterventionModal({ studentId, onClose, onSuccess }) {
     <div
       className="modal-overlay"
       onClick={onClose}
-      style={{ overflowY: 'auto' }}
     >
       <div
         className="modal-content"
         onClick={(e) => e.stopPropagation()}
-        style={{ overflowY: 'auto', maxHeight: '90vh' }}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          maxHeight: '88vh',
+          padding: 0,
+          overflow: 'hidden',
+        }}
       >
-        <div className="modal-header">
+        {/* Fixed header */}
+        <div className="modal-header" style={{ padding: '20px 20px 16px', flexShrink: 0 }}>
           <h2 className="modal-title">Log Intervention</h2>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
-        <form onSubmit={handleSubmit}>
+
+        {/* Scrollable body */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px', WebkitOverflowScrolling: 'touch' }}>
           <div className="form-group">
-            <label className="form-label">Date</label>
-            <input
-              type="date"
-              className="form-input"
-              value={form.date}
-              onChange={(e) => setForm({ ...form, date: e.target.value })}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Nature of Intervention</label>
+            <label className="form-label">Nature of Intervention *</label>
             <select
               className="form-select"
               value={form.nature}
@@ -158,30 +156,48 @@ function InterventionModal({ studentId, onClose, onSuccess }) {
               className="form-select"
               value={form.outcome}
               onChange={(e) => setForm({ ...form, outcome: e.target.value })}
-              required
             >
               <option value="">Unknown / Not yet assessed</option>
               <option value="SUCCESSFUL">✅ Successful — Student Recovered</option>
-              <option value="UNSUCCESSFUL">❌ Unsuccessful — Student Did Not Respond</option>
+              <option value="UNSUCCESSFUL">❌ Unsuccessful — Did Not Respond</option>
               <option value="PENDING">⏳ Pending — Follow-up Required</option>
             </select>
           </div>
-          <div className="form-group">
+          <div className="form-group" style={{ marginBottom: 8 }}>
             <label className="form-label">Notes</label>
             <textarea
               className="form-input form-textarea"
               placeholder="Details about the intervention..."
+              rows={3}
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              style={{ minHeight: 80, resize: 'vertical' }}
             />
           </div>
-          <div className="modal-actions">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={submitting}>
-              {submitting ? 'Saving...' : 'Save Intervention'}
-            </button>
-          </div>
-        </form>
+        </div>
+
+        {/* Sticky footer — always visible */}
+        <div style={{
+          flexShrink: 0,
+          padding: '16px 20px',
+          borderTop: '1px solid var(--glass-border)',
+          display: 'flex',
+          gap: 12,
+          background: 'var(--bg-surface)',
+        }}>
+          <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            style={{ flex: 2 }}
+            disabled={submitting || !form.nature}
+            onClick={handleSubmit}
+          >
+            {submitting ? 'Saving...' : 'Save Intervention'}
+          </button>
+        </div>
       </div>
     </div>
   );
