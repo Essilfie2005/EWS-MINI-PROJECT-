@@ -929,6 +929,8 @@ input, select, textarea {
   justify-content: center;
   z-index: 200;
   animation: fadeIn 0.2s ease;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-content {
@@ -939,6 +941,8 @@ input, select, textarea {
   max-width: 540px;
   max-height: 85vh;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   padding: 28px;
   box-shadow: var(--shadow-xl);
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -2015,14 +2019,22 @@ input, select, textarea {
   }
 
   /* Modals: bottom sheet style */
-  .modal-overlay { align-items: flex-end !important; padding: 0 !important; }
+  .modal-overlay {
+    align-items: flex-end !important;
+    padding: 0 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
   .modal-content {
     width: 100% !important;
     max-width: 100% !important;
-    max-height: 90vh !important;
+    max-height: 88vh !important;
     border-radius: 20px 20px 0 0 !important;
-    padding: 20px 16px !important;
+    padding: 20px 16px 32px !important;
     overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: contain !important;
+    touch-action: pan-y !important;
   }
 
   /* Toast */
