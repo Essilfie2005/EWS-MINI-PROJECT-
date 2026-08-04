@@ -2018,23 +2018,19 @@ input, select, textarea {
     font-size: 12px !important;
   }
 
-  /* Modals: bottom sheet style */
+  /* Modals: full screen on mobile */
   .modal-overlay {
-    align-items: flex-end !important;
+    align-items: stretch !important;
     padding: 0 !important;
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch !important;
   }
   .modal-content {
     width: 100% !important;
     max-width: 100% !important;
-    max-height: 88vh !important;
-    border-radius: 20px 20px 0 0 !important;
-    padding: 20px 16px 32px !important;
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    overscroll-behavior: contain !important;
-    touch-action: pan-y !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
   }
 
   /* Toast */

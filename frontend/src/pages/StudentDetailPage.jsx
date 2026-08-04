@@ -121,9 +121,11 @@ function InterventionModal({ studentId, onClose, onSuccess }) {
         style={{
           display: 'flex',
           flexDirection: 'column',
-          maxHeight: '88vh',
+          maxHeight: '100dvh',
+          height: '100dvh',
           padding: 0,
           overflow: 'hidden',
+          borderRadius: 0,
         }}
       >
         {/* Fixed header */}
